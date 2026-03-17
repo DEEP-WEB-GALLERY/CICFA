@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CICFA — Cultural Infrastructure Critical Failure Attack</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green: #00ff41;
+      --green-dim: #00cc33;
+      --green-dark: #003300;
+      --red: #ff2d2d;
+      --bg: #050505;
+      --scanline: rgba(0,0,0,0.15);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--green);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* CRT effects */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        var(--scanline) 0px,
+        var(--scanline) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(ellipse at center,
+        transparent 60%,
+        rgba(0,0,0,0.6) 100%
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    #terminal {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 2rem 4rem;
+      min-height: 100vh;
+    }
+
+    .line { display: block; white-space: pre-wrap; word-break: break-word; }
+    .prompt { color: var(--green-dim); }
+    .error  { color: var(--red); }
+    .dim    { color: #006600; }
+    .white  { color: #e0e0e0; }
+    .red    { color: var(--red); }
+    .bold   { color: #fff; font-weight: bold; }
+
+    .cursor {
+      display: inline-block;
+      width: 9px;
+      height: 1.1em;
+      background: var(--green);
+      animation: blink 1s step-end infinite;
+      vertical-align: text-bottom;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hidden { display: none; }
+
+    .ascii-banner {
+      color: var(--green);
+      line-height: 1.2;
+      font-size: 13px;
+      margin: 1rem 0;
+    }
+
+    .box {
+      border: 1px solid #006600;
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0;
+    }
+
+    .box-red {
+      border: 1px solid var(--red);
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0;
+    }
+
+    .progress {
+      display: inline-block;
+      color: var(--green);
+    }
+
+    .progress-bar {
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    a { color: var(--green); text-decoration: underline; }
+    a:hover { color: #fff; }
+
+    .cta-link {
+      display: inline-block;
+      border: 1px solid var(--red);
+      padding: 0.5rem 1.5rem;
+      color: var(--red);
+      text-decoration: none;
+      margin-top: 0.5rem;
+      letter-spacing: 0.1em;
+      transition: all 0.2s;
+    }
+
+    .cta-link:hover {
+      background: var(--red);
+      color: #000;
+    }
+
+    .glitch {
+      animation: glitch 4s infinite;
+    }
+
+    @keyframes glitch {
+      0%, 94%, 100% { transform: none; opacity: 1; }
+      95% { transform: skewX(-3deg); opacity: 0.8; }
+      96% { transform: skewX(2deg); color: var(--red); }
+      97% { transform: none; opacity: 1; }
+    }
+
+    .separator { color: #003300; }
+
+    #noise-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 998;
+      opacity: 0.03;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="noise-overlay"></canvas>
+
+<div id="terminal">
+  <div id="output"></div>
+  <span class="cursor" id="cursor"></span>
+</div>
+
+<script>
+// ── Noise canvas ──────────────────────────────────────────────
+const canvas = document.getElementById('noise-overlay');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+function renderNoise() {
+  const imageData = ctx.createImageData(canvas.width, canvas.height);
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const v = Math.random() * 255;
+    imageData.data[i] = v;
+    imageData.data[i+1] = v;
+    imageData.data[i+2] = v;
+    imageData.data[i+3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+setInterval(renderNoise, 80);
+
+// ── Terminal engine ───────────────────────────────────────────
+const output = document.getElementById('output');
+const cursor = document.getElementById('cursor');
+
+function span(cls, text) {
+  return `<span class="${cls}">${text}</span>`;
+}
+
+function appendLine(html, extraClass = '') {
+  const el = document.createElement('span');
+  el.className = 'line ' + extraClass;
+  el.innerHTML = html;
+  output.appendChild(el);
+  output.appendChild(document.createTextNode('\n'));
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+function blank() { appendLine(''); }
+
+// Queue of {delay, lines[]} blocks
+const queue = [];
+let running = false;
+
+function enqueue(delay, ...htmlLines) {
+  queue.push({ delay, lines: htmlLines });
+}
+
+function runQueue() {
+  if (running || queue.length === 0) return;
+  running = true;
+  const item = queue.shift();
+  setTimeout(() => {
+    for (const line of item.lines) appendLine(line);
+    running = false;
+    runQueue();
+  }, item.delay);
+}
+
+// ── Script ────────────────────────────────────────────────────
+
+enqueue(200,
+  span('dim', '───────────────────────────────────────────────────────────────────────────'),
+  span('dim', 'CICFA SYSTEM TERMINAL  //  DWG-CICFA-01  //  vB.01'),
+  span('dim', '───────────────────────────────────────────────────────────────────────────'),
+  ''
+);
+
+enqueue(600,
+  span('dim', '> BOOT SEQUENCE INITIATED...'),
+  span('dim', '> LOADING MODULES................'),
+);
+
+enqueue(900,
+  span('prompt', '[ OK ]') + ' cultural_critique.mod',
+  span('prompt', '[ OK ]') + ' institutional_memory.mod',
+  span('prompt', '[ OK ]') + ' symbolic_exploit.mod',
+  span('error',  '[ !! ]') + ' institution_accountability.mod  — NOT FOUND',
+  span('prompt', '[ OK ]') + ' friendly_ransomware.mod',
+  span('prompt', '[ OK ]') + ' bounty_logic.mod',
+  ''
+);
+
+enqueue(1200,
+  span('dim', '> ALL CRITICAL MODULES LOADED'),
+  span('dim', '> ESTABLISHING CONNECTION TO CULTURAL INFRASTRUCTURE...'),
+  span('prompt', '> CONNECTED.'),
+  ''
+);
+
+enqueue(800,
+  `<span class="ascii-banner glitch"> ██████╗██╗ ██████╗███████╗ █████╗ </span>`,
+  `<span class="ascii-banner">██╔════╝██║██╔════╝██╔════╝██╔══██╗</span>`,
+  `<span class="ascii-banner">██║     ██║██║     █████╗  ███████║</span>`,
+  `<span class="ascii-banner">██║     ██║██║     ██╔══╝  ██╔══██║</span>`,
+  `<span class="ascii-banner">╚██████╗██║╚██████╗██║     ██║  ██║</span>`,
+  `<span class="ascii-banner"> ╚═════╝╚═╝ ╚═════╝╚═╝     ╚═╝  ╚═╝</span>`,
+  ''
+);
+
+enqueue(400,
+  span('white', 'Cultural Infrastructure Critical Failure Attack'),
+  span('dim',   'Making institutions experience the aesthetic, symbolic,'),
+  span('dim',   'and procedural logic of cyber-attacks.'),
+  ''
+);
+
+enqueue(600,
+  span('dim', '─'.repeat(71)),
+  span('red', '  OPERATION 001 — ACTIVE'),
+  span('dim', '─'.repeat(71)),
+  ''
+);
+
+enqueue(400,
+  span('dim',   '  CODENAME   ') + span('white', 'MOMA.SYM'),
+  span('dim',   '  TARGET     ') + span('white', 'Museum of Modern Art (MoMA), New York City'),
+  span('dim',   '  VECTOR     ') + span('white', 'Symbolic [A] + Technical White Hat [B]'),
+  span('dim',   '  STATUS     ') + span('prompt','████████████████░░░░  OPEN'),
+  span('dim',   '  DEADLINE   ') + span('white', 'TBD'),
+  span('dim',   '  REWARD     ') + span('white', 'CICFA credit · Exhibition attribution'),
+  ''
+);
+
+enqueue(500,
+  span('dim', '> BOUNTY BRIEF'),
+  span('dim', '─'.repeat(71)),
+  ''
+);
+
+enqueue(300,
+  span('white', 'MoMA has been selected as the first target of the CICFA Bounty Program.'),
+  ''
+);
+enqueue(300,
+  span('white', 'Identify a vulnerability in its institutional architecture.'),
+  span('white', 'Submit a disclosure. The act of naming it is the work.'),
+  ''
+);
+
+enqueue(500,
+  span('prompt', '[A] SYMBOLIC / CONCEPTUAL'),
+  span('dim',    '    A structural contradiction. A power leak. A governance exploit.'),
+  span('dim',    '    A curatorial blindspot. Institutional critique as vuln disclosure.'),
+  ''
+);
+
+enqueue(400,
+  span('error',  '[B] TECHNICAL / WHITE HAT'),
+  span('dim',    '    A real opsec or security finding in MoMA\'s public infrastructure.'),
+  span('dim',    '    No exploitation. No harm. Submit through CICFA.'),
+  span('dim',    '    We handle responsible disclosure. The finding is the art.'),
+  ''
+);
+
+enqueue(300,
+  span('dim', '> A real CVE filed as a ransom note is both.'),
+  ''
+);
+
+enqueue(600,
+  span('dim', '─'.repeat(71)),
+  span('dim', '> SUBMIT AS'),
+  span('dim', '─'.repeat(71)),
+  ''
+);
+
+enqueue(300,
+  span('prompt', '  $ ./submit ') + span('white', '--type="written"   ') + span('dim', '# doc, ransom note, breach narrative'),
+  span('prompt', '  $ ./submit ') + span('white', '--type="visual"    ') + span('dim', '# attack map, power flow, org chart'),
+  span('prompt', '  $ ./submit ') + span('white', '--type="artifact"  ') + span('dim', '# deployable page or tool'),
+  ''
+);
+
+enqueue(500,
+  span('dim', '─'.repeat(71)),
+  span('dim', '> WHO WE WANT'),
+  span('dim', '─'.repeat(71)),
+  ''
+);
+
+enqueue(300,
+  span('dim', '  security researchers  ·  net artists  ·  institutional critics'),
+  span('dim', '  curators  ·  theorists  ·  hacktivists  ·  designers'),
+  span('dim', '  deep web researchers  ·  philosophers  ·  anyone paying attention'),
+  ''
+);
+
+enqueue(600,
+  span('dim', '─'.repeat(71)),
+  span('dim', '> ETHICAL POSITION'),
+  span('dim', '─'.repeat(71)),
+  ''
+);
+
+enqueue(300,
+  span('dim', '  assert ') + span('white', 'work_is_about_violence') + span('dim', '  !=  ') + span('white', 'work_is_violent'),
+  span('dim', '  assert ') + span('white', 'stages_symbolic_systems') + span('dim', ' !=  ') + span('white', 'real_world_harm'),
+  span('dim', '  assert ') + span('white', 'fragility_as_aesthetic') + span('dim', '  ==  ') + span('prompt', 'True'),
+  ''
+);
+
+enqueue(700,
+  span('dim', '─'.repeat(71)),
+  ''
+);
+
+enqueue(400,
+  span('prompt', '> SYSTEM READY. AWAITING SUBMISSION.'),
+  ''
+);
+
+enqueue(500,
+  `<a href="https://boris-maker.github.io/CICF/" class="cta-link">→ SUBMIT VULNERABILITY DISCLOSURE</a>`,
+  ''
+);
+
+enqueue(300,
+  '',
+  span('dim', '  Maintained by @MarketDepravation  ·  DWG-CICFA-01'),
+  span('dim', '  github.com/boris-maker/CICFA'),
+  ''
+);
+
+runQueue();
+setInterval(runQueue, 100);
+</script>
+
+</body>
+</html>
