@@ -549,8 +549,19 @@
     }
 
     .contributors-table td:last-child {
+<<<<<<< HEAD
       text-align: right;
       color: var(--accent2);
+=======
+    }
+
+    .contributors-table td a {
+      color: var(--fg);
+      text-decoration: none;
+    }
+    .contributors-table td a:hover {
+      text-decoration: underline;
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
     }
 
     .contributors-empty {
@@ -1314,7 +1325,12 @@
 const CICFA = {
   walletAddress:   "0x7fC76C439c200151Dde0345B09BA02764B9143Ec",
   walletEns:       "",
+<<<<<<< HEAD
   rpcUrl:          "https://cloudflare-eth.com",
+=======
+  etherscanApi:    "https://api.etherscan.io/v2/api",
+  etherscanKey:    "ZQBP5YU2FREQPCKXSGMB2HEKT5XYW4G3N1",
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
   targetAmountEth: 1.0,
   deadlineIso:     "",
   submissionUrl:   "https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=submission.yml",
@@ -1479,17 +1495,25 @@ function closeBreach() {
 /* ── LIVE ETH BALANCE ────────────────────────────────────────── */
 (function() {
   const addr   = CICFA.walletAddress;
+<<<<<<< HEAD
   const rpc    = CICFA.rpcUrl;
   const target = CICFA.targetAmountEth;
+=======
+  const target = CICFA.targetAmountEth;
+  const api    = CICFA.etherscanApi;
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
   const valEl  = document.getElementById('pot-value');
   const amtEl  = document.getElementById('pot-amount');
   const fillEl = document.getElementById('pot-progress-fill');
   const goalEl = document.getElementById('pot-goal');
   const contEl = document.getElementById('pot-contributors');
 
+<<<<<<< HEAD
   // Count contributors from config
   const staticContributors = document.querySelectorAll('#contributors-body tr td:first-child').length;
 
+=======
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
   if (!addr) {
     valEl.textContent = '0.000';
     amtEl.classList.remove('loading');
@@ -1500,6 +1524,7 @@ function closeBreach() {
 
   async function fetchBalance() {
     try {
+<<<<<<< HEAD
       const res = await fetch(rpc, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1520,6 +1545,52 @@ function closeBreach() {
     return null;
   }
 
+=======
+      const res = await fetch(`${api}?chainid=1&module=account&action=balance&address=${addr}&tag=latest&apikey=${CICFA.etherscanKey}`);
+      const data = await res.json();
+      if (data.status === '1' && data.result) {
+        return Number(BigInt(data.result)) / 1e18;
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  async function fetchContributors() {
+    try {
+      const res = await fetch(`${api}?chainid=1&module=account&action=txlist&address=${addr}&startblock=0&endblock=99999999&sort=asc&apikey=${CICFA.etherscanKey}`);
+      const data = await res.json();
+      if (data.status === '1' && data.result) {
+        const totals = {};
+        for (const tx of data.result) {
+          if (tx.to.toLowerCase() === addr.toLowerCase() && tx.value !== '0' && tx.isError === '0') {
+            totals[tx.from] = (totals[tx.from] || 0n) + BigInt(tx.value);
+          }
+        }
+        return Object.entries(totals)
+          .map(([from, wei]) => ({ addr: from, eth: Number(wei) / 1e18 }))
+          .sort((a, b) => b.eth - a.eth);
+      }
+    } catch(e) {}
+    return [];
+  }
+
+  function shortAddr(a) {
+    return a.slice(0, 6) + '…' + a.slice(-4);
+  }
+
+  function renderContributors(list) {
+    const tbody = document.getElementById('contributors-body');
+    if (!tbody) return;
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2"><div class="contributors-empty">NO CONTRIBUTORS YET — BE THE FIRST</div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(c =>
+      `<tr><td><a href="https://etherscan.io/address/${c.addr}" target="_blank" rel="noopener">${shortAddr(c.addr)}</a></td><td>${c.eth.toFixed(4)}</td></tr>`
+    ).join('');
+  }
+
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
   function animateValue(el, from, to, duration) {
     const start = performance.now();
     function step(now) {
@@ -1533,20 +1604,32 @@ function closeBreach() {
   }
 
   async function update() {
+<<<<<<< HEAD
     const bal = await fetchBalance();
+=======
+    const [bal, contributors] = await Promise.all([fetchBalance(), fetchContributors()]);
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
     amtEl.classList.remove('loading');
     if (bal !== null) {
       animateValue(valEl, 0, bal, 1800);
       const pct = Math.min((bal / target) * 100, 100);
       setTimeout(() => fillEl.style.width = pct + '%', 200);
       goalEl.textContent = `${bal.toFixed(4)} / ${target} ETH GOAL`;
+<<<<<<< HEAD
       const cnt = staticContributors || 0;
+=======
+      const cnt = contributors.length;
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
       contEl.textContent = cnt > 0 ? `${cnt} CONTRIBUTOR${cnt !== 1 ? 'S' : ''}` : 'BE THE FIRST CONTRIBUTOR';
     } else {
       valEl.textContent = '0.000';
       contEl.textContent = 'UNABLE TO FETCH BALANCE — CHECK ETHERSCAN';
       goalEl.textContent = `GOAL: Ξ ${target}`;
     }
+<<<<<<< HEAD
+=======
+    renderContributors(contributors);
+>>>>>>> 444b602 (fix eth balance fetch: replace broken cloudflare rpc with etherscan v2 api + dynamic contributors)
   }
 
   update();
