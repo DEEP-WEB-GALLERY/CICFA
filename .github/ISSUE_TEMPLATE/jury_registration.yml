@@ -1,0 +1,80 @@
+name: Jury Registration — Register as Juror
+description: Register as a CICFA juror for Operation 001. First volunteers fill the seats. Your vote is signed with your wallet and recorded on-chain.
+title: "[JURY] "
+labels: ["jury", "operation-001"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## CICFA JURY — OPERATION 001: MOMA.SYM
+
+        The CICFA jury self-assembles from the first volunteers to register.
+        **First come, first seated. Max 5 jurors.**
+
+        **Your role:**
+        Review vulnerability disclosures submitted to Operation 001.
+        Cast your vote (approve / reject) by signing a message with your ETH wallet.
+        Simple majority wins. The vote is on-chain — transparent, verifiable, permanent.
+
+        **No compensation.** Jury credit on the CICFA dashboard and archive.
+
+  - type: input
+    id: handle
+    attributes:
+      label: Handle / Name
+      description: Your public handle or name — will appear on the CICFA jury board
+      placeholder: "@handle"
+    validations:
+      required: true
+
+  - type: input
+    id: wallet
+    attributes:
+      label: ETH Wallet Address
+      description: Required to register. Your vote will be verified against this address via wallet signature (EIP-191).
+      placeholder: "0x..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: bio
+    attributes:
+      label: Brief Bio / Credentials
+      description: Who are you? Why should you be on the jury? (2–4 sentences)
+      placeholder: "Artist / researcher / critic / collector / curator / builder..."
+    validations:
+      required: true
+
+  - type: input
+    id: affiliation
+    attributes:
+      label: Affiliation (optional)
+      description: Institution, collective, or project you're affiliated with
+      placeholder: "Independent / DWG / etc."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: agreement
+    attributes:
+      label: Jury Agreement
+      options:
+        - label: I will review all submitted disclosures before the deadline
+          required: true
+        - label: I will cast my vote by signing a message with my registered wallet address
+          required: true
+        - label: I understand jury seats are limited to 5 — first come, first seated
+          required: true
+        - label: I have no undisclosed conflict of interest with MoMA
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Voting process:** Once submissions close, the jury receives a signed voting prompt.
+        Each juror signs a structured message with their wallet (no gas fees — off-chain signature via EIP-191).
+        Signatures are published publicly alongside the verdict.
+
+        **On approval:** ETH bounty transfers to the winning submitter's wallet.
+        Jury receives public credit on the CICFA dashboard and archive.

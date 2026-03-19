@@ -1,0 +1,120 @@
+name: Vulnerability Disclosure — Submit Finding
+description: Submit your finding to the CICFA MOMA.SYM Bounty Program. Approved submissions receive the ETH prize pool.
+title: "[DISCLOSURE] "
+labels: ["submission", "operation-001"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## CICFA BOUNTY PROGRAM — OPERATION 001: MOMA.SYM
+        Submit your vulnerability disclosure below. Your submission will be reviewed by the CICFA Jury.
+        If approved, the ETH bounty pool transfers to your wallet address.
+
+        **Two registers are valid — symbolic/conceptual (A) and technical/white-hat (B).**
+        Both can coexist in one submission.
+
+        > The act of naming the vulnerability is the work. The disclosure is the performance.
+
+  - type: input
+    id: handle
+    attributes:
+      label: Handle / Name
+      description: Your name, alias, or social handle (public — will appear on the dashboard if approved)
+      placeholder: "@handle or Anonymous"
+    validations:
+      required: true
+
+  - type: input
+    id: wallet
+    attributes:
+      label: ETH Wallet Address
+      description: Your Ethereum address — required to receive the prize if approved. Will be verified by jury.
+      placeholder: "0x..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: register
+    attributes:
+      label: Register
+      description: Which register does your submission operate in?
+      options:
+        - "Register A — Symbolic / Conceptual"
+        - "Register B — Technical (White Hat)"
+        - "Both A + B"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: format
+    attributes:
+      label: Submission Format
+      options:
+        - "Document (written disclosure, 1–3 pages)"
+        - "Visual / Diagram (attack surface map, power flow, etc.)"
+        - "Web Artifact (deployable page, tool, or interface)"
+        - "Multiple formats"
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Finding Title
+      description: Name the vulnerability. Be specific.
+      placeholder: "e.g. Curatorial Capture via Corporate Board Composition"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Finding Summary
+      description: Describe the vulnerability in 2–5 sentences. What is the flaw? Where does it manifest? What does it expose?
+      placeholder: "The vulnerability is..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: Full Disclosure
+      description: |
+        Your complete submission. Paste text directly or link to hosted files/pages.
+        Register B: include only findings, not working exploit code.
+      placeholder: |
+        Attach or paste your full disclosure here.
+        For web artifacts, link to the hosted version + include a screenshot.
+    validations:
+      required: true
+
+  - type: input
+    id: links
+    attributes:
+      label: Links / Attachments
+      description: Any supporting links (hosted artifacts, diagrams, sources)
+      placeholder: "https://..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: agreement
+    attributes:
+      label: Submission Agreement
+      options:
+        - label: I confirm this is my original work or I have rights to submit it
+          required: true
+        - label: I understand this is a symbolic/artistic project — no real-world harm is intended or involved
+          required: true
+        - label: For Register B submissions — I confirm no exploitation occurred and findings are responsibly disclosed through CICFA
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **After submission:** The CICFA Jury will review your disclosure. You will be notified of their decision.
+        Approved submissions receive the ETH prize pool transferred to your provided wallet address.
+        All submissions are archived — the archive is the work.
+
+        **Register B note:** Your finding will be held for 30 days while CICFA notifies the institution before publication.

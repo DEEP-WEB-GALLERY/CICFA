@@ -3,397 +3,1610 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CICFA — Cultural Infrastructure Critical Failure Attack</title>
+  <title>MOMA.SYM — CICFA Bounty Program</title>
+  <meta name="description" content="CICFA Operation 001: decentralized bug bounty targeting MoMA's institutional architecture. Fund the pot or take the challenge.">
+  <meta name="author" content="@MarketDepravation">
+  <!-- QR Code library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    /* ── TOKENS ──────────────────────────────────────────────── */
     :root {
-      --green: #00ff41;
-      --green-dim: #00cc33;
-      --green-dark: #003300;
-      --red: #ff2d2d;
-      --bg: #050505;
-      --scanline: rgba(0,0,0,0.15);
+      --bg:       #0a0a0a;
+      --fg:       #e8e8e8;
+      --accent:   #ff2d2d;
+      --accent2:  #00ffcc;
+      --dim:      #555;
+      --border:   #222;
+      --mono:     'Courier New', Courier, monospace;
+      --warn-bg:  #0f0000;
+      --fund-bg:  #00100a;
     }
 
-    html, body {
-      height: 100%;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
       background: var(--bg);
-      color: var(--green);
-      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      color: var(--fg);
+      font-family: var(--mono);
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.7;
       overflow-x: hidden;
     }
 
-    /* CRT effects */
-    body::before {
-      content: '';
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { opacity: 0.75; }
+
+    /* ── BOOT SCREEN ─────────────────────────────────────────── */
+    #boot-screen {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s ease;
+    }
+
+    #boot-screen.fade-out { opacity: 0; pointer-events: none; }
+
+    .boot-terminal {
+      width: min(640px, 90vw);
+      padding: 2rem;
+      border: 1px solid #333;
+      background: #050505;
+    }
+
+    .boot-line {
+      color: #00ff88;
+      font-size: 13px;
+      line-height: 1.8;
+      min-height: 1.8em;
+    }
+
+    .boot-line.dim { color: #444; }
+    .boot-line.warn { color: var(--accent); }
+    .boot-line.done { color: #fff; }
+
+    .boot-prompt { color: #555; }
+
+    .boot-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background: #00ff88;
+      vertical-align: middle;
+      animation: blink 0.7s infinite;
+    }
+
+    /* ── BREACH MODAL ────────────────────────────────────────── */
+    #breach-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.97);
+      z-index: 8888;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 2rem;
+    }
+
+    #breach-modal.visible { display: flex; }
+
+    .breach-word {
+      font-size: clamp(5rem, 14vw, 11rem);
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      animation: breach-pulse 0.9s ease-in-out infinite alternate, glitch-burst 6s infinite;
+      position: relative;
+      line-height: 1;
+    }
+
+    .breach-sub {
+      font-size: 11px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    .breach-sub strong { color: var(--fg); }
+
+    .breach-enter {
+      display: inline-block;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      padding: 0.75rem 2.5rem;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      margin-top: 1rem;
+    }
+
+    .breach-enter:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
+    /* ── CRT OVERLAY ─────────────────────────────────────────── */
+    #crt-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 7777;
       background: repeating-linear-gradient(
         0deg,
-        var(--scanline) 0px,
-        var(--scanline) 1px,
-        transparent 1px,
-        transparent 3px
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.12) 2px,
+        rgba(0,0,0,0.12) 4px
       );
-      pointer-events: none;
-      z-index: 1000;
+      box-shadow: inset 0 0 140px rgba(0,0,0,0.55);
+      animation: crt-flicker 9s infinite;
     }
 
-    body::after {
-      content: '';
+    /* ── NOISE CANVAS ────────────────────────────────────────── */
+    #noise-canvas {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: radial-gradient(ellipse at center,
-        transparent 60%,
-        rgba(0,0,0,0.6) 100%
-      );
+      inset: 0;
       pointer-events: none;
-      z-index: 999;
+      z-index: 6666;
+      opacity: 0.03;
+      background-size: 256px 256px;
     }
 
-    #terminal {
+    /* ── ALERT BAR ───────────────────────────────────────────── */
+    #alert-bar {
+      position: sticky;
+      top: 0;
+      z-index: 5555;
+      background: var(--accent);
+      color: #000;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      overflow: hidden;
+      height: 28px;
+      display: flex;
+      align-items: center;
+    }
+
+    .alert-track {
+      display: inline-block;
+      white-space: nowrap;
+      animation: marquee 28s linear infinite;
+      padding-right: 4rem;
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────────────── */
+    .wrap {
       max-width: 900px;
       margin: 0 auto;
       padding: 2rem 2rem 4rem;
-      min-height: 100vh;
     }
 
-    .line { display: block; white-space: pre-wrap; word-break: break-word; }
-    .prompt { color: var(--green-dim); }
-    .error  { color: var(--red); }
-    .dim    { color: #006600; }
-    .white  { color: #e0e0e0; }
-    .red    { color: var(--red); }
-    .bold   { color: #fff; font-weight: bold; }
+    /* ── SYSTEM HEADER ───────────────────────────────────────── */
+    .sys-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--accent);
+      padding-bottom: 0.75rem;
+      margin-bottom: 2.5rem;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
 
-    .cursor {
+    .sys-header .right { color: var(--dim); text-align: right; }
+
+    .status-badge {
       display: inline-block;
-      width: 9px;
-      height: 1.1em;
-      background: var(--green);
-      animation: blink 1s step-end infinite;
-      vertical-align: text-bottom;
+      background: var(--accent);
+      color: #000;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      padding: 1px 8px;
+      animation: badge-blink 2.5s infinite;
     }
 
+    /* ── HERO ────────────────────────────────────────────────── */
+    .hero { margin-bottom: 3rem; }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      letter-spacing: 0.03em;
+      color: #fff;
+      line-height: 1.05;
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero h1::before,
+    .hero h1::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+    }
+
+    .hero h1.glitching::before {
+      color: var(--accent);
+      animation: glitch-layer-1 0.15s steps(2) forwards;
+      clip-path: polygon(0 20%, 100% 20%, 100% 45%, 0 45%);
+    }
+
+    .hero h1.glitching::after {
+      color: var(--accent2);
+      animation: glitch-layer-2 0.15s steps(2) forwards;
+      clip-path: polygon(0 55%, 100% 55%, 100% 80%, 0 80%);
+    }
+
+    .hero-sub {
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-top: 0.5rem;
+      line-height: 1.9;
+    }
+
+    .hero-sub strong { color: var(--fg); }
+
+    .target-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      border: 1px solid var(--accent);
+      padding: 0.35rem 0.75rem;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-top: 1.25rem;
+    }
+
+    .target-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: target-pulse 1.2s ease-in-out infinite;
+    }
+
+    /* ── SECTION LABELS ──────────────────────────────────────── */
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border-left: 2px solid var(--accent);
+      padding-left: 0.75rem;
+      margin-bottom: 1rem;
+      margin-top: 2.5rem;
+    }
+
+    /* ── LIVE BOUNTY POT ─────────────────────────────────────── */
+    .pot-block {
+      border: 1px solid var(--accent);
+      padding: 2rem;
+      background: var(--warn-bg);
+      text-align: center;
+      margin: 2rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pot-block::before {
+      content: '⚠';
+      position: absolute;
+      top: 0.5rem; left: 0.75rem;
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+    }
+
+    .pot-label {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 0.75rem;
+    }
+
+    .pot-amount {
+      font-size: clamp(3rem, 9vw, 6rem);
+      color: var(--accent);
+      letter-spacing: 0.03em;
+      line-height: 1;
+      animation: pot-glow 2s ease-in-out infinite alternate;
+    }
+
+    .pot-amount.loading { color: #333; }
+
+    .pot-unit {
+      font-size: 1.5rem;
+      color: var(--dim);
+      vertical-align: super;
+      margin-right: 0.25rem;
+    }
+
+    .pot-contributors {
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      margin-top: 0.5rem;
+    }
+
+    .pot-progress {
+      margin: 1.25rem 0;
+      height: 4px;
+      background: #1a0000;
+      border: 1px solid #330000;
+      position: relative;
+    }
+
+    .pot-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 1.5s ease;
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .pot-goal {
+      font-size: 10px;
+      color: #333;
+      letter-spacing: 0.1em;
+      margin-top: 0.25rem;
+    }
+
+    /* ── FORK CTA ────────────────────────────────────────────── */
+    .fork-cta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 2rem 0 3rem;
+    }
+
+    .fork-btn {
+      display: block;
+      text-align: center;
+      padding: 1.25rem 1rem;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .fork-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .fork-btn:active { transform: translateY(0); }
+
+    .fork-btn-fund {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .fork-btn-hunt {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .fork-divider {
+      text-align: center;
+      font-size: 10px;
+      color: #333;
+      letter-spacing: 0.2em;
+      margin-top: 0.5rem;
+      grid-column: 1 / -1;
+    }
+
+    /* ── DIVIDER ─────────────────────────────────────────────── */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 3rem 0;
+    }
+
+    /* ── FUNDER SECTION ──────────────────────────────────────── */
+    .fund-block {
+      border: 1px solid #1a3a2a;
+      background: var(--fund-bg);
+      padding: 1.75rem;
+      margin: 1.5rem 0;
+    }
+
+    .fund-intro {
+      font-size: 13px;
+      color: var(--fg);
+      margin-bottom: 1.5rem;
+      line-height: 1.8;
+    }
+
+    .fund-intro em {
+      color: var(--accent2);
+      font-style: normal;
+    }
+
+    .wallet-block {
+      border: 1px solid #1a3a2a;
+      padding: 1.25rem;
+      background: #030d07;
+      margin: 1.25rem 0;
+    }
+
+    .wallet-label {
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #2a5a3a;
+      margin-bottom: 0.4rem;
+    }
+
+    .wallet-ens {
+      font-size: 1.4rem;
+      color: var(--accent2);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.3rem;
+    }
+
+    .wallet-address {
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+      word-break: break-all;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .wallet-address:hover { color: var(--fg); }
+
+    .wallet-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .wallet-btn {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid #1a3a2a;
+      color: var(--accent2);
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .wallet-btn:hover {
+      background: var(--accent2);
+      color: #000;
+    }
+
+    #qr-container {
+      margin-top: 1.25rem;
+      display: none;
+    }
+
+    #qr-container.visible { display: block; }
+
+    #qr-code {
+      display: inline-block;
+      padding: 0.75rem;
+      background: #fff;
+    }
+
+    .qr-label {
+      font-size: 9px;
+      color: var(--dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── CONTRIBUTORS TABLE ──────────────────────────────────── */
+    .contributors-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.25rem;
+      font-size: 12px;
+    }
+
+    .contributors-table th {
+      text-align: left;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .contributors-table td {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #111;
+      color: var(--fg);
+    }
+
+    .contributors-table td:last-child {
+      text-align: right;
+      color: var(--accent2);
+    }
+
+    .contributors-empty {
+      font-size: 11px;
+      color: #333;
+      letter-spacing: 0.1em;
+      padding: 1rem 0;
+    }
+
+    /* ── HUNTER SECTION ──────────────────────────────────────── */
+    .hunt-block {
+      border: 1px solid var(--border);
+      background: #0d0d0d;
+      padding: 1.75rem;
+      margin: 1.5rem 0;
+    }
+
+    .hunt-intro {
+      font-size: 13px;
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+    }
+
+    .hunt-intro em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    /* ── REGISTERS ───────────────────────────────────────────── */
+    .registers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+
+    .register {
+      border: 1px solid var(--border);
+      padding: 1.1rem;
+      background: #0a0a0a;
+    }
+
+    .reg-label {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .register p {
+      font-size: 12px;
+      color: #aaa;
+      line-height: 1.7;
+      margin-bottom: 0.5rem;
+    }
+
+    .register ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .register ul li {
+      font-size: 11px;
+      color: var(--dim);
+      padding: 0.2rem 0;
+    }
+
+    .register ul li::before {
+      content: '— ';
+      color: #333;
+    }
+
+    /* ── PROTOCOL ────────────────────────────────────────────── */
+    .protocol-block {
+      border: 1px solid var(--accent);
+      background: var(--warn-bg);
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .protocol-label {
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .protocol-rule {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #1a0000;
+      font-size: 12px;
+    }
+
+    .protocol-rule:last-child { border-bottom: none; }
+
+    .rule-num {
+      color: var(--accent);
+      min-width: 1.5rem;
+      font-size: 11px;
+    }
+
+    .rule-text { color: var(--fg); }
+    .rule-text small { color: var(--dim); font-size: 10px; display: block; }
+
+    /* ── JURY ────────────────────────────────────────────────── */
+    .jury-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .jury-card {
+      border: 1px solid var(--border);
+      padding: 0.9rem;
+      background: #0a0a0a;
+    }
+
+    .jury-handle {
+      color: var(--fg);
+      font-size: 13px;
+      margin-bottom: 0.2rem;
+    }
+
+    .jury-role {
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .jury-affiliation {
+      font-size: 10px;
+      color: #333;
+      margin-top: 0.2rem;
+    }
+
+    .jury-empty {
+      font-size: 11px;
+      color: #333;
+      letter-spacing: 0.1em;
+      border: 1px solid #1a1a1a;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    /* ── SUBMISSION FORMATS ──────────────────────────────────── */
+    .formats { margin: 1rem 0; }
+
+    .format-item {
+      display: flex;
+      gap: 1rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+    }
+
+    .format-item:last-child { border-bottom: none; }
+
+    .format-tag {
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      min-width: 110px;
+      padding-top: 0.1rem;
+    }
+
+    .format-desc { font-size: 12px; color: var(--fg); }
+
+    /* ── REWARD BLOCK ────────────────────────────────────────── */
+    .reward-block {
+      border: 1px solid var(--accent);
+      padding: 1.25rem;
+      background: var(--warn-bg);
+      margin: 1.5rem 0;
+    }
+
+    .reward-label {
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .reward-line {
+      font-size: 13px;
+      color: var(--fg);
+      padding: 0.3rem 0;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .reward-line::before {
+      content: '→';
+      color: var(--accent);
+    }
+
+    /* ── SUBMISSION CTA ──────────────────────────────────────── */
+    .submit-cta {
+      display: block;
+      text-align: center;
+      padding: 1.25rem 2rem;
+      background: var(--accent);
+      color: #000;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin: 2rem 0;
+      transition: opacity 0.2s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .submit-cta:hover {
+      opacity: 0.88;
+      transform: translateY(-1px);
+      color: #000;
+    }
+
+    .submit-cta::after {
+      content: ' ›';
+      animation: blink 0.8s infinite;
+    }
+
+    /* ── COUNTDOWN ───────────────────────────────────────────── */
+    .countdown {
+      text-align: center;
+      padding: 2rem;
+      border: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+
+    .countdown-label {
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 0.6rem;
+    }
+
+    .countdown-timer {
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown-timer.green  { color: #00ff88; }
+    .countdown-timer.yellow { color: #ffcc00; }
+    .countdown-timer.red    { color: var(--accent); animation: pot-glow 0.6s ease-in-out infinite alternate; }
+
+    .countdown-deadline {
+      font-size: 11px;
+      color: var(--dim);
+      margin-top: 0.4rem;
+    }
+
+    /* ── BRIEF BLOCK ─────────────────────────────────────────── */
+    .brief-block {
+      border-left: 2px solid var(--accent);
+      padding-left: 1rem;
+      margin: 1.25rem 0;
+    }
+
+    .brief-block p {
+      font-size: 13px;
+      color: var(--fg);
+      margin-bottom: 0.75rem;
+      line-height: 1.8;
+    }
+
+    /* ── CORRUPTED TEXT ──────────────────────────────────────── */
+    .corrupt-text {
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .corrupt-text.resolved {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────────────── */
+    .site-footer {
+      margin-top: 4rem;
+      padding: 2rem 0 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.9;
+    }
+
+    .footer-rule {
+      border: none;
+      border-top: 1px solid #111;
+      margin: 1.25rem 0;
+    }
+
+    .footer-section-title {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ── NOTIFICATIONS ───────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #111;
+      border: 1px solid var(--accent);
+      color: var(--fg);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      padding: 0.6rem 1rem;
+      z-index: 9000;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* ── KEYFRAMES ───────────────────────────────────────────── */
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0; }
     }
 
-    .hidden { display: none; }
-
-    .ascii-banner {
-      color: var(--green);
-      line-height: 1.2;
-      font-size: 13px;
-      margin: 1rem 0;
+    @keyframes breach-pulse {
+      from { text-shadow: 0 0 20px rgba(255,45,45,0.4); }
+      to   { text-shadow: 0 0 60px rgba(255,45,45,0.9), 0 0 120px rgba(255,45,45,0.3); }
     }
 
-    .box {
-      border: 1px solid #006600;
-      padding: 0.75rem 1rem;
-      margin: 0.5rem 0;
+    @keyframes glitch-burst {
+      0%, 88%, 100% { transform: none; }
+      89% { transform: translateX(-4px) skewX(-1deg); }
+      90% { transform: translateX(4px) skewX(1deg); }
+      91% { transform: translateX(-2px); }
+      92% { transform: none; }
     }
 
-    .box-red {
-      border: 1px solid var(--red);
-      padding: 0.75rem 1rem;
-      margin: 0.5rem 0;
+    @keyframes glitch-layer-1 {
+      0%   { opacity: 0.8; transform: translateX(-4px); }
+      100% { opacity: 0;   transform: translateX(4px); }
     }
 
-    .progress {
-      display: inline-block;
-      color: var(--green);
+    @keyframes glitch-layer-2 {
+      0%   { opacity: 0.6; transform: translateX(4px); }
+      100% { opacity: 0;   transform: translateX(-4px); }
     }
 
-    .progress-bar {
-      display: inline-block;
-      overflow: hidden;
-      white-space: nowrap;
+    @keyframes crt-flicker {
+      0%, 90%, 100%   { opacity: 1; }
+      91%, 93%, 95%   { opacity: 0.94; }
+      92%, 94%        { opacity: 0.97; }
     }
 
-    a { color: var(--green); text-decoration: underline; }
-    a:hover { color: #fff; }
-
-    .cta-link {
-      display: inline-block;
-      border: 1px solid var(--red);
-      padding: 0.5rem 1.5rem;
-      color: var(--red);
-      text-decoration: none;
-      margin-top: 0.5rem;
-      letter-spacing: 0.1em;
-      transition: all 0.2s;
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
     }
 
-    .cta-link:hover {
-      background: var(--red);
-      color: #000;
+    @keyframes pot-glow {
+      from { text-shadow: 0 0 10px rgba(255,45,45,0.2); }
+      to   { text-shadow: 0 0 40px rgba(255,45,45,0.7); }
     }
 
-    .glitch {
-      animation: glitch 4s infinite;
+    @keyframes target-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
     }
 
-    @keyframes glitch {
-      0%, 94%, 100% { transform: none; opacity: 1; }
-      95% { transform: skewX(-3deg); opacity: 0.8; }
-      96% { transform: skewX(2deg); color: var(--red); }
-      97% { transform: none; opacity: 1; }
+    @keyframes badge-blink {
+      0%, 80%, 100% { opacity: 1; }
+      85%, 95% { opacity: 0.3; }
     }
 
-    .separator { color: #003300; }
-
-    #noise-overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 998;
-      opacity: 0.03;
+    /* ── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .wrap { padding: 1.25rem 1.25rem 3rem; }
+      .registers { grid-template-columns: 1fr; }
+      .fork-cta { grid-template-columns: 1fr; }
+      .jury-grid { grid-template-columns: 1fr 1fr; }
+      .wallet-actions { flex-direction: column; }
     }
   </style>
 </head>
 <body>
 
-<canvas id="noise-overlay"></canvas>
-
-<div id="terminal">
-  <div id="output"></div>
-  <span class="cursor" id="cursor"></span>
+<!-- ── BOOT SCREEN ──────────────────────────────────────────── -->
+<div id="boot-screen">
+  <div class="boot-terminal" id="boot-terminal">
+    <div id="boot-lines"></div>
+    <span class="boot-cursor" id="boot-cursor"></span>
+  </div>
 </div>
 
+<!-- ── BREACH MODAL ─────────────────────────────────────────── -->
+<div id="breach-modal">
+  <div class="breach-word">BREACH</div>
+  <div class="breach-sub">
+    OPERATION 001 ACTIVE // <strong>TARGET ACQUIRED</strong><br>
+    MOMA.SYM — CULTURAL INFRASTRUCTURE COMPROMISED
+  </div>
+  <button class="breach-enter" onclick="closeBreach()">[ ENTER PROGRAM ]</button>
+</div>
+
+<!-- ── PERSISTENT OVERLAYS ──────────────────────────────────── -->
+<div id="crt-overlay"></div>
+<canvas id="noise-canvas"></canvas>
+
+<!-- ── ALERT BAR ────────────────────────────────────────────── -->
+<div id="alert-bar">
+  <span class="alert-track" id="alert-track"></span>
+</div>
+
+<!-- ════ MAIN CONTENT ════════════════════════════════════════ -->
+<div class="wrap">
+
+  <!-- SYSTEM HEADER -->
+  <div class="sys-header">
+    <span>CICFA // BOUNTY PROGRAM // OPERATION: 001</span>
+    <span class="right">
+      <span class="status-badge">ACTIVE</span>
+      &nbsp; DWG-CICFA-01
+    </span>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1 data-text="MOMA.SYM" id="hero-h1">MOMA.SYM</h1>
+    <div class="hero-sub">
+      CULTURAL INFRASTRUCTURE CRITICAL FAILURE ATTACK<br>
+      VULNERABILITY DISCLOSURE PROGRAM &mdash; OPERATION 001<br>
+      TARGET: <strong>Museum of Modern Art</strong> &mdash; New York City, USA
+    </div>
+    <div class="target-pill">
+      <span class="target-dot"></span>
+      BREACH WINDOW OPEN &nbsp;//&nbsp; MoMA SELECTED
+    </div>
+  </div>
+
+  <!-- ── LIVE BOUNTY POT ──────────────────────────────────── -->
+  <h2 class="section-label">⚠ Live Bounty Pool</h2>
+
+  <div class="pot-block">
+    <div class="pot-label">CURRENT PRIZE POT — VERIFIED ON-CHAIN</div>
+    <div class="pot-amount loading" id="pot-amount">
+      <span class="pot-unit">Ξ</span><span id="pot-value">···</span>
+    </div>
+    <div class="pot-contributors" id="pot-contributors">
+      LOADING&hellip;
+    </div>
+    <div class="pot-progress">
+      <div class="pot-progress-fill" id="pot-progress-fill"></div>
+    </div>
+    <div class="pot-goal" id="pot-goal"></div>
+  </div>
+
+  <!-- FORK CTA — the psychological split -->
+  <div class="fork-cta">
+    <a href="#fund" class="fork-btn fork-btn-fund">⊕ Fund the Bounty</a>
+    <a href="#hunt" class="fork-btn fork-btn-hunt">⊗ Take the Challenge</a>
+    <div class="fork-divider">choose your role</div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ══════════════════════════════════════════════════════════
+       FUNDER SECTION
+  ══════════════════════════════════════════════════════════ -->
+  <div id="fund">
+    <h2 class="section-label">⊕ Fund the Bounty</h2>
+
+    <div class="fund-block">
+      <p class="fund-intro">
+        You are invited to arm the program.<br>
+        Every contribution increases the prize. The pot is on-chain.
+        <em>Transparent. Verifiable. Permanent.</em><br><br>
+        To fund the bounty, send ETH to the address below.
+        Your contribution is attributed on the board.
+        The act of funding is itself a critical gesture —
+        an assertion that institutional critique has <em>market value</em>.
+      </p>
+
+      <div class="wallet-block">
+        
+        
+        <div class="wallet-label" style="margin-top:0.6rem;">Ethereum Address</div>
+        <div class="wallet-address" id="wallet-addr-display" onclick="copyAddress()" title="Click to copy">
+          0x7fC76C439c200151Dde0345B09BA02764B9143Ec
+        </div>
+        <div class="wallet-actions">
+          <button class="wallet-btn" onclick="copyAddress()">[ Copy Address ]</button>
+          <button class="wallet-btn" onclick="toggleQR()">[ Show QR Code ]</button>
+          
+          <a class="wallet-btn" href="https://etherscan.io/address/0x7fC76C439c200151Dde0345B09BA02764B9143Ec" target="_blank" rel="noopener">[ View on Etherscan ]</a>
+          
+        </div>
+        <div id="qr-container">
+          <div class="qr-label" style="margin-top:0.75rem;">Scan to send ETH</div>
+          <div id="qr-code"></div>
+        </div>
+        
+      </div>
+
+      <!-- CONTRIBUTORS -->
+      <h2 class="section-label" style="margin-top:1.5rem;">Contributors</h2>
+      <table class="contributors-table" id="contributors-table">
+        <thead>
+          <tr>
+            <th>Handle</th>
+            <th>Amount (ETH)</th>
+          </tr>
+        </thead>
+        <tbody id="contributors-body">
+          
+          <tr>
+            <td colspan="2">
+              <div class="contributors-empty">
+                NO CONTRIBUTORS YET — BE THE FIRST
+              </div>
+            </td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ══════════════════════════════════════════════════════════
+       HUNTER SECTION
+  ══════════════════════════════════════════════════════════ -->
+  <div id="hunt">
+    <h2 class="section-label">⊗ Take the Challenge</h2>
+
+    <div class="hunt-block">
+      <p class="hunt-intro">
+        Museum of Modern Art has been selected as the first CICFA target.<br>
+        Surface a vulnerability. Submit the disclosure.<br>
+        If verified by the jury, <em>the bounty unlocks</em> and transfers to you.
+      </p>
+
+      <!-- MISSION BRIEF -->
+      <h2 class="section-label">Mission Brief</h2>
+      <div class="brief-block corrupt-text" data-original="Surface the flaw. Submit the disclosure. The act of naming it is the work.">
+        
+        <p>MoMA has been selected as the first target of the CICFA Bounty Program.</p>
+        <p>You are invited to identify and document a vulnerability in its institutional
+        architecture — symbolic, structural, or technical. Who gets shown? Who funds the
+        walls? What disappears between the press release and the permanent collection?
+        Where does the opsec fail?</p>
+        <p>Surface the flaw. Submit the disclosure. The act of naming it is the work.
+        If the jury verifies it — the bounty is yours.</p>
+    
+      </div>
+
+      <!-- REGISTERS -->
+      <h2 class="section-label">Operating Registers</h2>
+      <div class="registers">
+        <div class="register">
+          <div class="reg-label">Register A — Symbolic / Conceptual</div>
+          <p>A structural contradiction. A power leak. A governance exploit. A curatorial blindspot.</p>
+          <p>Institutional critique as vulnerability disclosure.</p>
+          <ul>
+            <li>Corporate board composition + sponsorship conflicts</li>
+            <li>Canon formation: whose work enters the collection?</li>
+            <li>Ticket pricing vs. "public institution" mandate</li>
+            <li>Labor disputes and staff organizing</li>
+            <li>Expansion history and franchise logic</li>
+          </ul>
+        </div>
+        <div class="register">
+          <div class="reg-label">Register B — Technical (White Hat)</div>
+          <p>A real security or opsec finding in the institution's public digital infrastructure.</p>
+          <p>No exploitation. No harm. Submit through CICFA. We handle responsible disclosure.</p>
+          <ul>
+            <li>Public website and API endpoints</li>
+            <li>Ticketing system opsec</li>
+            <li>Digital collection infrastructure</li>
+            <li>Subdomain enumeration / cert exposure</li>
+            <li>Public data leaks or misconfigured assets</li>
+          </ul>
+        </div>
+      </div>
+      <p style="font-size: 11px; color: var(--dim); margin-top: 0.5rem;">
+        Both registers are valid. They can coexist in one submission.
+      </p>
+
+      <!-- VERIFICATION PROTOCOL -->
+      <h2 class="section-label">Verification Protocol</h2>
+      <div class="protocol-block">
+        <div class="protocol-label">⚠ Unlock Conditions — A submission is valid if:</div>
+        <div class="protocol-rule">
+          <span class="rule-num">01</span>
+          <span class="rule-text">
+            It discloses a genuine vulnerability in the target's institutional architecture
+            <small>Symbolic, structural, or technical — both registers qualify</small>
+          </span>
+        </div>
+        <div class="protocol-rule">
+          <span class="rule-num">02</span>
+          <span class="rule-text">
+            It follows the submission format and contains sufficient detail to verify the finding
+            <small>Vague claims do not qualify — the disclosure must be specific and documented</small>
+          </span>
+        </div>
+        <div class="protocol-rule">
+          <span class="rule-num">03</span>
+          <span class="rule-text">
+            It passes review by the CICFA Jury (simple majority)
+            <small>Jury composition published below — no anonymous adjudication</small>
+          </span>
+        </div>
+        <div class="protocol-rule">
+          <span class="rule-num">04</span>
+          <span class="rule-text">
+            [Register B only] It survives the 30-day responsible disclosure window without retraction
+            <small>Target institution is notified via ransom letter; finding published after 30 days</small>
+          </span>
+        </div>
+        <div class="protocol-rule">
+          <span class="rule-num">05</span>
+          <span class="rule-text">
+            On jury approval: ETH transferred from the bounty pool to the submitter's provided address
+            <small>No intermediary. No delay after jury vote. One winner per operation.</small>
+          </span>
+        </div>
+      </div>
+
+      <!-- JURY -->
+      <h2 class="section-label">The Jury</h2>
+
+      
+      <div class="protocol-block" style="border-color: #1a3a2a; background: var(--fund-bg); margin-bottom: 1rem;">
+        <div class="protocol-label" style="color: var(--accent2);">
+          ⊕ JURY SEATS OPEN — 0/5 FILLED
+        </div>
+        <p style="font-size:12px; color:#aaa; margin-bottom:1rem; line-height:1.7;">
+          The jury self-assembles from the first volunteers to register.
+          Submit your ETH wallet address via the link below.
+          Once registered, your vote on submissions will be signed with your wallet
+          and recorded on-chain — provably yours, provably permanent.
+        </p>
+        <a href="https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=jury_registration.yml" class="wallet-btn" style="display:inline-block; color:var(--accent2); border-color:#1a3a2a;">
+          [ Register as Juror → ]
+        </a>
+        <div style="font-size:10px; color:#333; margin-top:0.75rem; letter-spacing:0.1em;">
+          SEATS REMAINING: 5
+          &nbsp;//&nbsp; FIRST COME, FIRST SEATED
+          &nbsp;//&nbsp; ETH WALLET REQUIRED
+        </div>
+      </div>
+      
+
+      <div class="jury-grid" id="jury-grid">
+        
+        <div class="jury-empty" style="grid-column: 1 / -1;">
+          
+          NO JURORS REGISTERED YET — SEATS OPEN ABOVE
+          
+        </div>
+        
+      </div>
+
+      
+
+      <!-- SUBMISSION FORMATS -->
+      <h2 class="section-label">Submission Formats</h2>
+      <div class="formats">
+        <div class="format-item">
+          <span class="format-tag">Document</span>
+          <span class="format-desc">Written disclosure, breach narrative, exploit paper, or ransom note &mdash; 1&ndash;3 pages, any style</span>
+        </div>
+        <div class="format-item">
+          <span class="format-tag">Visual / Diagram</span>
+          <span class="format-desc">Attack surface map, power flow diagram, org chart annotated as exploit topology</span>
+        </div>
+        <div class="format-item">
+          <span class="format-tag">Web Artifact</span>
+          <span class="format-desc">A deployable page, tool, or interface &mdash; link to hosted version + screenshot</span>
+        </div>
+      </div>
+
+      <!-- REWARD -->
+      <div class="reward-block">
+        <div class="reward-label">Prize Structure</div>
+        <div class="reward-line">ETH bounty pool transferred on jury approval</div>
+        <div class="reward-line">Public credit on the CICFA program dashboard</div>
+        <div class="reward-line">Exhibition attribution if selected for display</div>
+        <div class="reward-line">The naming of the vulnerability enters the archive — the archive is the work</div>
+      </div>
+
+      <!-- SUBMIT CTA -->
+      <a href="https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=submission.yml" class="submit-cta">
+        Submit Vulnerability Disclosure
+      </a>
+    </div>
+  </div>
+
+  <!-- ── COUNTDOWN ────────────────────────────────────────── -->
+  
+
+  <!-- ── FOOTER ────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <hr class="footer-rule">
+
+    <div class="footer-section-title">Responsible Disclosure Policy</div>
+    <p>
+      CICFA operates a responsible disclosure framework for white-hat technical findings
+      (Register B). All such submissions are held in strict confidence for a 30-day
+      notification window. The target institution is notified via a formal disclosure letter
+      before any public archival. The letter is itself a CICFA artifact.
+    </p>
+
+    <hr class="footer-rule">
+
+    <div class="footer-section-title">Ethics Statement</div>
+    <p>
+      The work is about violence, not violent.<br>
+      It stages symbolic systems, not real-world harm.<br>
+      It exposes fragility as aesthetic condition.<br>
+      No exploitation has occurred or will occur.<br>
+      The performance is already underway.
+    </p>
+
+    <hr class="footer-rule">
+
+    <p>
+      CICFA &mdash; <a href="https://deep-web-gallery.github.io/CICFA/">https://deep-web-gallery.github.io/CICFA/</a>
+      &mdash; @MarketDepravation &mdash; DWG-CICFA-01
+    </p>
+  </footer>
+
+</div><!-- /wrap -->
+
+<!-- ── TOAST NOTIFICATION ────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ════ INLINE CONFIG ═══════════════════════════════════════ -->
 <script>
-// ── Noise canvas ──────────────────────────────────────────────
-const canvas = document.getElementById('noise-overlay');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-function renderNoise() {
-  const imageData = ctx.createImageData(canvas.width, canvas.height);
-  for (let i = 0; i < imageData.data.length; i += 4) {
-    const v = Math.random() * 255;
-    imageData.data[i] = v;
-    imageData.data[i+1] = v;
-    imageData.data[i+2] = v;
-    imageData.data[i+3] = 255;
+const CICFA = {
+  walletAddress:   "0x7fC76C439c200151Dde0345B09BA02764B9143Ec",
+  walletEns:       "",
+  rpcUrl:          "https://cloudflare-eth.com",
+  targetAmountEth: 1.0,
+  deadlineIso:     "",
+  submissionUrl:   "https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=submission.yml",
+  bootLines:       ["CICFA OS v2.1.4 \u2014 booting...", "initializing exploit_surface_scanner...", "loading institutional_memory_core...", "target_lock: MUSEUM OF MODERN ART [CONFIRMED]", "operation_id: 001 // MOMA.SYM", "bounty_pool: LIVE \u2014 checking on-chain balance...", "jury_status: ASSEMBLED", "status: BREACH WINDOW OPEN", "WARNING: INSTITUTIONAL ARCHITECTURE UNSTABLE", "connecting to bounty_relay_network...", "CICFA SYSTEM ONLINE."],
+  alertText:       "⚠ WARNING: INSTITUTIONAL ARCHITECTURE COMPROMISED // BREACH WINDOW: ACTIVE // OPERATION 001 IN PROGRESS // TARGET: MUSEUM OF MODERN ART // REGISTER A+B OPEN // SUBMIT YOUR FINDINGS // BOUNTY POOL LIVE //",
+};
+</script>
+
+<!-- ════ SCRIPTS ═════════════════════════════════════════════ -->
+<script>
+/* ── NOISE CANVAS ────────────────────────────────────────────── */
+(function() {
+  const c = document.getElementById('noise-canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(256, 256);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.floor(Math.random() * 255);
+    img.data[i] = img.data[i+1] = img.data[i+2] = v;
+    img.data[i+3] = 255;
   }
-  ctx.putImageData(imageData, 0, 0);
+  ctx.putImageData(img, 0, 0);
+  c.style.backgroundImage = `url(${c.toDataURL()})`;
+  c.style.backgroundSize = '256px 256px';
+  c.style.backgroundRepeat = 'repeat';
+  c.style.width = '100vw';
+  c.style.height = '100vh';
+  c.width = 1; c.height = 1; // shrink DOM canvas, bg-image does the work
+})();
+
+/* ── ALERT BAR ───────────────────────────────────────────────── */
+(function() {
+  const text = CICFA.alertText + ' ' + CICFA.alertText + ' ';
+  const el = document.getElementById('alert-track');
+  el.textContent = text + text; // doubled for seamless loop
+})();
+
+/* ── BOOT SEQUENCE ───────────────────────────────────────────── */
+(function() {
+  const container = document.getElementById('boot-lines');
+  const cursor    = document.getElementById('boot-cursor');
+  const lines     = CICFA.bootLines;
+  let lineIdx = 0;
+
+  function typeLine(text, cls, done) {
+    const div = document.createElement('div');
+    div.className = 'boot-line' + (cls ? ' ' + cls : '');
+    container.appendChild(div);
+    cursor.remove();
+    div.appendChild(cursor);
+
+    const prefix = text.startsWith('CICFA') ? '' : '> ';
+    const full = prefix + text;
+    let charIdx = 0;
+
+    function typeChar() {
+      if (charIdx < full.length) {
+        div.textContent = full.slice(0, ++charIdx);
+        div.appendChild(cursor);
+        setTimeout(typeChar, 15 + Math.random() * 30);
+      } else {
+        setTimeout(done, 120);
+      }
+    }
+    typeChar();
+  }
+
+  function bootNext() {
+    if (lineIdx >= lines.length) {
+      setTimeout(showBreach, 600);
+      return;
+    }
+    const text = lines[lineIdx++];
+    let cls = '';
+    if (text.includes('WARNING') || text.includes('UNSTABLE')) cls = 'warn';
+    else if (text.includes('ONLINE') || text.includes('CONFIRMED')) cls = 'done';
+    else if (text.startsWith('CICFA')) cls = '';
+    typeLine(text, cls, bootNext);
+  }
+
+  setTimeout(bootNext, 400);
+})();
+
+/* ── BOOT → BREACH TRANSITION ────────────────────────────────── */
+function showBreach() {
+  const boot = document.getElementById('boot-screen');
+  boot.classList.add('fade-out');
+  boot.addEventListener('transitionend', () => boot.style.display = 'none', { once: true });
+  const modal = document.getElementById('breach-modal');
+  modal.classList.add('visible');
 }
-setInterval(renderNoise, 80);
 
-// ── Terminal engine ───────────────────────────────────────────
-const output = document.getElementById('output');
-const cursor = document.getElementById('cursor');
-
-function span(cls, text) {
-  return `<span class="${cls}">${text}</span>`;
+function closeBreach() {
+  const modal = document.getElementById('breach-modal');
+  modal.style.opacity = '0';
+  modal.style.transition = 'opacity 0.5s';
+  setTimeout(() => modal.style.display = 'none', 500);
 }
 
-function appendLine(html, extraClass = '') {
-  const el = document.createElement('span');
-  el.className = 'line ' + extraClass;
-  el.innerHTML = html;
-  output.appendChild(el);
-  output.appendChild(document.createTextNode('\n'));
-  window.scrollTo(0, document.body.scrollHeight);
+/* ── GLITCH TEXT (periodic) ──────────────────────────────────── */
+(function() {
+  const h1 = document.getElementById('hero-h1');
+  function triggerGlitch() {
+    h1.classList.add('glitching');
+    setTimeout(() => h1.classList.remove('glitching'), 200);
+    setTimeout(triggerGlitch, 5000 + Math.random() * 8000);
+  }
+  setTimeout(triggerGlitch, 3000);
+})();
+
+/* ── CORRUPTED TEXT RESOLVE (IntersectionObserver) ───────────── */
+(function() {
+  const GLYPHS = '░▒▓█▌▐▄▀■□▪▫▬●◆◇○';
+  function scramble(el) {
+    const orig = el.textContent;
+    const arr  = orig.split('');
+    let done = 0;
+
+    function revealChar(i) {
+      if (i >= arr.length) return;
+      const orig_char = arr[i];
+      if (orig_char === ' ' || orig_char === '\n') {
+        revealChar(i + 1);
+        return;
+      }
+      // flash glyph first
+      const copy = arr.slice();
+      copy[i] = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+      el.textContent = copy.join('');
+      setTimeout(() => {
+        arr[i] = orig_char;
+        el.textContent = arr.join('');
+        revealChar(i + 1);
+      }, 28);
+    }
+
+    // start by setting all to glyphs
+    const scrambled = arr.map(c => c === ' ' || c === '\n' ? c : GLYPHS[Math.floor(Math.random() * GLYPHS.length)]);
+    el.textContent = scrambled.join('');
+    el.classList.add('resolved');
+    setTimeout(() => revealChar(0), 100);
+  }
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        obs.unobserve(e.target);
+        const target = e.target;
+        // Only scramble text nodes, skip HTML-rich blocks
+        if (!target.querySelector('p,ul,li')) {
+          scramble(target);
+        } else {
+          target.classList.add('resolved');
+        }
+      }
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll('.corrupt-text').forEach(el => obs.observe(el));
+})();
+
+/* ── LIVE ETH BALANCE ────────────────────────────────────────── */
+(function() {
+  const addr   = CICFA.walletAddress;
+  const rpc    = CICFA.rpcUrl;
+  const target = CICFA.targetAmountEth;
+  const valEl  = document.getElementById('pot-value');
+  const amtEl  = document.getElementById('pot-amount');
+  const fillEl = document.getElementById('pot-progress-fill');
+  const goalEl = document.getElementById('pot-goal');
+  const contEl = document.getElementById('pot-contributors');
+
+  // Count contributors from config
+  const staticContributors = document.querySelectorAll('#contributors-body tr td:first-child').length;
+
+  if (!addr) {
+    valEl.textContent = '0.000';
+    amtEl.classList.remove('loading');
+    contEl.textContent = 'WALLET NOT YET CONFIGURED';
+    goalEl.textContent = `GOAL: Ξ ${target}`;
+    return;
+  }
+
+  async function fetchBalance() {
+    try {
+      const res = await fetch(rpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_getBalance',
+          params: [addr, 'latest'],
+          id: 1
+        })
+      });
+      const data = await res.json();
+      if (data.result) {
+        const wei = BigInt(data.result);
+        const eth = Number(wei) / 1e18;
+        return eth;
+      }
+    } catch(e) { /* fall through */ }
+    return null;
+  }
+
+  function animateValue(el, from, to, duration) {
+    const start = performance.now();
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const current = from + (to - from) * ease;
+      el.textContent = current.toFixed(4);
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  async function update() {
+    const bal = await fetchBalance();
+    amtEl.classList.remove('loading');
+    if (bal !== null) {
+      animateValue(valEl, 0, bal, 1800);
+      const pct = Math.min((bal / target) * 100, 100);
+      setTimeout(() => fillEl.style.width = pct + '%', 200);
+      goalEl.textContent = `${bal.toFixed(4)} / ${target} ETH GOAL`;
+      const cnt = staticContributors || 0;
+      contEl.textContent = cnt > 0 ? `${cnt} CONTRIBUTOR${cnt !== 1 ? 'S' : ''}` : 'BE THE FIRST CONTRIBUTOR';
+    } else {
+      valEl.textContent = '0.000';
+      contEl.textContent = 'UNABLE TO FETCH BALANCE — CHECK ETHERSCAN';
+      goalEl.textContent = `GOAL: Ξ ${target}`;
+    }
+  }
+
+  update();
+  setInterval(update, 60000); // refresh every 60s
+})();
+
+/* ── COUNTDOWN TIMER ─────────────────────────────────────────── */
+(function() {
+  if (!CICFA.deadlineIso) return;
+  const deadline = new Date(CICFA.deadlineIso).getTime();
+  const el = document.getElementById('countdown-timer');
+  if (!el) return;
+
+  function update() {
+    const diff = deadline - Date.now();
+    if (diff <= 0) {
+      el.textContent = 'CLOSED';
+      el.className = 'countdown-timer red';
+      return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${String(d).padStart(2,'0')}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+    el.className = 'countdown-timer ' + (d > 7 ? 'green' : d >= 2 ? 'yellow' : 'red');
+  }
+  update();
+  setInterval(update, 1000);
+})();
+
+/* ── QR CODE ─────────────────────────────────────────────────── */
+let qrGenerated = false;
+function toggleQR() {
+  const container = document.getElementById('qr-container');
+  container.classList.toggle('visible');
+  if (!qrGenerated && typeof QRCode !== 'undefined' && CICFA.walletAddress) {
+    new QRCode(document.getElementById('qr-code'), {
+      text: 'ethereum:' + CICFA.walletAddress,
+      width: 160, height: 160,
+      colorDark: '#000', colorLight: '#fff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    qrGenerated = true;
+  }
 }
 
-function blank() { appendLine(''); }
-
-// Queue of {delay, lines[]} blocks
-const queue = [];
-let running = false;
-
-function enqueue(delay, ...htmlLines) {
-  queue.push({ delay, lines: htmlLines });
+/* ── COPY ADDRESS ────────────────────────────────────────────── */
+function copyAddress() {
+  if (!CICFA.walletAddress) return;
+  navigator.clipboard.writeText(CICFA.walletAddress).then(() => showToast('ADDRESS COPIED'));
 }
 
-function runQueue() {
-  if (running || queue.length === 0) return;
-  running = true;
-  const item = queue.shift();
-  setTimeout(() => {
-    for (const line of item.lines) appendLine(line);
-    running = false;
-    runQueue();
-  }, item.delay);
+/* ── TOAST ───────────────────────────────────────────────────── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
-
-// ── Script ────────────────────────────────────────────────────
-
-enqueue(200,
-  span('dim', '───────────────────────────────────────────────────────────────────────────'),
-  span('dim', 'CICFA SYSTEM TERMINAL  //  DWG-CICFA-01  //  vB.01'),
-  span('dim', '───────────────────────────────────────────────────────────────────────────'),
-  ''
-);
-
-enqueue(600,
-  span('dim', '> BOOT SEQUENCE INITIATED...'),
-  span('dim', '> LOADING MODULES................'),
-);
-
-enqueue(900,
-  span('prompt', '[ OK ]') + ' cultural_critique.mod',
-  span('prompt', '[ OK ]') + ' institutional_memory.mod',
-  span('prompt', '[ OK ]') + ' symbolic_exploit.mod',
-  span('error',  '[ !! ]') + ' institution_accountability.mod  — NOT FOUND',
-  span('prompt', '[ OK ]') + ' friendly_ransomware.mod',
-  span('prompt', '[ OK ]') + ' bounty_logic.mod',
-  ''
-);
-
-enqueue(1200,
-  span('dim', '> ALL CRITICAL MODULES LOADED'),
-  span('dim', '> ESTABLISHING CONNECTION TO CULTURAL INFRASTRUCTURE...'),
-  span('prompt', '> CONNECTED.'),
-  ''
-);
-
-enqueue(800,
-  `<span class="ascii-banner glitch"> ██████╗██╗ ██████╗███████╗ █████╗ </span>`,
-  `<span class="ascii-banner">██╔════╝██║██╔════╝██╔════╝██╔══██╗</span>`,
-  `<span class="ascii-banner">██║     ██║██║     █████╗  ███████║</span>`,
-  `<span class="ascii-banner">██║     ██║██║     ██╔══╝  ██╔══██║</span>`,
-  `<span class="ascii-banner">╚██████╗██║╚██████╗██║     ██║  ██║</span>`,
-  `<span class="ascii-banner"> ╚═════╝╚═╝ ╚═════╝╚═╝     ╚═╝  ╚═╝</span>`,
-  ''
-);
-
-enqueue(400,
-  span('white', 'Cultural Infrastructure Critical Failure Attack'),
-  span('dim',   'Making institutions experience the aesthetic, symbolic,'),
-  span('dim',   'and procedural logic of cyber-attacks.'),
-  ''
-);
-
-enqueue(600,
-  span('dim', '─'.repeat(71)),
-  span('red', '  OPERATION 001 — ACTIVE'),
-  span('dim', '─'.repeat(71)),
-  ''
-);
-
-enqueue(400,
-  span('dim',   '  CODENAME   ') + span('white', 'MOMA.SYM'),
-  span('dim',   '  TARGET     ') + span('white', 'Museum of Modern Art (MoMA), New York City'),
-  span('dim',   '  VECTOR     ') + span('white', 'Symbolic [A] + Technical White Hat [B]'),
-  span('dim',   '  STATUS     ') + span('prompt','████████████████░░░░  OPEN'),
-  span('dim',   '  DEADLINE   ') + span('white', 'TBD'),
-  span('dim',   '  REWARD     ') + span('white', 'CICFA credit · Exhibition attribution'),
-  ''
-);
-
-enqueue(500,
-  span('dim', '> BOUNTY BRIEF'),
-  span('dim', '─'.repeat(71)),
-  ''
-);
-
-enqueue(300,
-  span('white', 'MoMA has been selected as the first target of the CICFA Bounty Program.'),
-  ''
-);
-enqueue(300,
-  span('white', 'Identify a vulnerability in its institutional architecture.'),
-  span('white', 'Submit a disclosure. The act of naming it is the work.'),
-  ''
-);
-
-enqueue(500,
-  span('prompt', '[A] SYMBOLIC / CONCEPTUAL'),
-  span('dim',    '    A structural contradiction. A power leak. A governance exploit.'),
-  span('dim',    '    A curatorial blindspot. Institutional critique as vuln disclosure.'),
-  ''
-);
-
-enqueue(400,
-  span('error',  '[B] TECHNICAL / WHITE HAT'),
-  span('dim',    '    A real opsec or security finding in MoMA\'s public infrastructure.'),
-  span('dim',    '    No exploitation. No harm. Submit through CICFA.'),
-  span('dim',    '    We handle responsible disclosure. The finding is the art.'),
-  ''
-);
-
-enqueue(300,
-  span('dim', '> A real CVE filed as a ransom note is both.'),
-  ''
-);
-
-enqueue(600,
-  span('dim', '─'.repeat(71)),
-  span('dim', '> SUBMIT AS'),
-  span('dim', '─'.repeat(71)),
-  ''
-);
-
-enqueue(300,
-  span('prompt', '  $ ./submit ') + span('white', '--type="written"   ') + span('dim', '# doc, ransom note, breach narrative'),
-  span('prompt', '  $ ./submit ') + span('white', '--type="visual"    ') + span('dim', '# attack map, power flow, org chart'),
-  span('prompt', '  $ ./submit ') + span('white', '--type="artifact"  ') + span('dim', '# deployable page or tool'),
-  ''
-);
-
-enqueue(500,
-  span('dim', '─'.repeat(71)),
-  span('dim', '> WHO WE WANT'),
-  span('dim', '─'.repeat(71)),
-  ''
-);
-
-enqueue(300,
-  span('dim', '  security researchers  ·  net artists  ·  institutional critics'),
-  span('dim', '  curators  ·  theorists  ·  hacktivists  ·  designers'),
-  span('dim', '  deep web researchers  ·  philosophers  ·  anyone paying attention'),
-  ''
-);
-
-enqueue(600,
-  span('dim', '─'.repeat(71)),
-  span('dim', '> ETHICAL POSITION'),
-  span('dim', '─'.repeat(71)),
-  ''
-);
-
-enqueue(300,
-  span('dim', '  assert ') + span('white', 'work_is_about_violence') + span('dim', '  !=  ') + span('white', 'work_is_violent'),
-  span('dim', '  assert ') + span('white', 'stages_symbolic_systems') + span('dim', ' !=  ') + span('white', 'real_world_harm'),
-  span('dim', '  assert ') + span('white', 'fragility_as_aesthetic') + span('dim', '  ==  ') + span('prompt', 'True'),
-  ''
-);
-
-enqueue(700,
-  span('dim', '─'.repeat(71)),
-  ''
-);
-
-enqueue(400,
-  span('prompt', '> SYSTEM READY. AWAITING SUBMISSION.'),
-  ''
-);
-
-enqueue(500,
-  `<a href="https://deep-web-gallery.github.io/CICFA/" class="cta-link">→ SUBMIT VULNERABILITY DISCLOSURE</a>`,
-  ''
-);
-
-enqueue(300,
-  '',
-  span('dim', '  Maintained by @MarketDepravation  ·  DWG-CICFA-01'),
-  span('dim', '  github.com/DEEP-WEB-GALLERY/CICFA'),
-  ''
-);
-
-runQueue();
-setInterval(runQueue, 100);
 </script>
 
 </body>
