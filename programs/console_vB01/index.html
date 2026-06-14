@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="en" data-theme="green">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CULTURAL INFRASTRUCTURE CRITICAL FAILURE ATTACK_vB.01</title>
+  <meta name="description" content="CICFA Program Console — experimental terminal surface (vB.01). Not the live bounty site." />
+
+  <style>
+    :root{
+      --bg: #07090b;
+      --panel: rgba(8, 10, 12, .78);
+      --panel2: rgba(8, 10, 12, .92);
+      --border: rgba(190, 255, 200, .14);
+
+      --ink: rgba(200, 255, 210, .92);
+      --muted: rgba(170, 220, 185, .62);
+
+      --good: #43ff8e;
+      --warn: #ffcc4a;
+      --bad:  #ff3b3b;
+      --cyan: #4be3ff;
+      --vio:  #c16dff;
+      --dim:  rgba(120, 150, 135, .35);
+
+      --shadow: 0 0 18px rgba(90, 255, 145, .10);
+      --glow: 0 0 10px rgba(67, 255, 142, .35), 0 0 40px rgba(67, 255, 142, .08);
+
+      --radius: 12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --line: 1.35;
+    }
+
+    html[data-theme="red"]{
+      --ink: rgba(255, 205, 205, .92);
+      --muted: rgba(255, 165, 165, .60);
+      --border: rgba(255, 90, 90, .16);
+      --good: #ff5b5b;
+      --bad:  #ff2d2d;
+      --cyan: #ff7a7a;
+      --vio:  #ff3b3b;
+      --shadow: 0 0 18px rgba(255, 80, 80, .10);
+      --glow: 0 0 10px rgba(255, 80, 80, .30), 0 0 40px rgba(255, 80, 80, .08);
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--mono);
+      background: radial-gradient(1200px 800px at 30% 20%, rgba(67,255,142,.06), transparent 55%),
+                  radial-gradient(900px 700px at 80% 90%, rgba(75,227,255,.04), transparent 50%),
+                  linear-gradient(180deg, #050607, #07090b 70%, #050607);
+      color: var(--ink);
+      line-height: var(--line);
+      overflow-x:hidden;
+    }
+
+    .windowbar{
+      position:sticky; top:0; z-index:50;
+      backdrop-filter: blur(8px);
+      background: rgba(0,0,0,.42);
+      border-bottom: 1px solid var(--border);
+    }
+    .windowbar-inner{
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 10px 16px;
+      display:flex;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .dots{ display:flex; gap:8px; align-items:center; }
+    .dot{ width:10px; height:10px; border-radius:999px; opacity:.8; }
+    .dot.red{ background: #ff5f56; }
+    .dot.yel{ background: #ffbd2e; }
+    .dot.grn{ background: #27c93f; }
+    .title{
+      font-weight:700; letter-spacing:.08em; font-size:12px;
+      color: var(--muted);
+      text-transform:uppercase;
+      flex: 1 1 360px;
+      min-width: 240px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .toggles{
+      display:flex; gap:10px; align-items:center;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+    .btn{
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      color: var(--ink);
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      letter-spacing: .06em;
+      cursor:pointer;
+      box-shadow: var(--shadow);
+      user-select:none;
+      white-space: nowrap;
+      text-decoration: none;
+      font-family: var(--mono);
+    }
+    .btn:hover{ filter: brightness(1.12); box-shadow: var(--glow); }
+    .btn:active{ transform: translateY(1px); }
+
+    .crt::before{
+      content:"";
+      pointer-events:none;
+      position:fixed; inset:0;
+      background:
+        linear-gradient(rgba(255,255,255,.05), rgba(0,0,0,.04)),
+        repeating-linear-gradient(
+          to bottom,
+          rgba(0,0,0,.20) 0px,
+          rgba(0,0,0,.20) 1px,
+          rgba(0,0,0,0) 3px,
+          rgba(0,0,0,0) 6px
+        );
+      mix-blend-mode: overlay;
+      opacity:.35;
+      z-index:9999;
+    }
+    .crt::after{
+      content:"";
+      pointer-events:none;
+      position:fixed; inset:-20px;
+      background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.05), rgba(0,0,0,.55) 70%);
+      opacity:.55;
+      z-index:9998;
+    }
+
+    @keyframes jitter {
+      0%, 100% { transform: translate(0,0); }
+      20% { transform: translate(1px,-0.5px); }
+      40% { transform: translate(-1px, 0.5px); }
+      60% { transform: translate(0.5px,1px); }
+      80% { transform: translate(-0.5px,-1px); }
+    }
+    .glitch{
+      position:relative;
+      display:inline-block;
+      text-shadow: 0 0 10px rgba(67,255,142,.16);
+      animation: jitter 6s infinite steps(1,end);
+    }
+    .glitch::before,.glitch::after{
+      content: attr(data-text);
+      position:absolute; left:0; top:0;
+      width:100%;
+      opacity:.18;
+      clip-path: inset(0 0 0 0);
+    }
+    .glitch::before{
+      transform: translate(1px,0);
+      color: var(--cyan);
+      mix-blend-mode: screen;
+      clip-path: inset(0 0 65% 0);
+    }
+    .glitch::after{
+      transform: translate(-1px,0);
+      color: var(--bad);
+      mix-blend-mode: screen;
+      clip-path: inset(35% 0 0 0);
+    }
+
+    main{
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 20px 16px 48px;
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 980px){
+      main{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      min-width: 0;
+    }
+    .panel-header{
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 10px;
+      background: rgba(0,0,0,.25);
+      flex-wrap: wrap;
+    }
+    .panel-title{
+      font-weight: 800;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .panel-body{ padding: 14px; }
+
+    .hr{ height:1px; background: var(--border); margin: 12px 0; }
+
+    .ascii{
+      font-size: 11px;
+      line-height: 1.12;
+      white-space: pre;
+      color: var(--muted);
+      opacity:.95;
+      user-select:text;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tag{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      font-size: 11px;
+      letter-spacing:.06em;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .tag b{ color: var(--ink); font-weight: 800; }
+    .tag .dotmini{
+      width:7px; height:7px; border-radius:99px; background: var(--good);
+      box-shadow: 0 0 10px rgba(67,255,142,.35);
+    }
+    .tag.bad .dotmini{ background: var(--bad); box-shadow: 0 0 10px rgba(255,59,59,.35); }
+    .tag.warn .dotmini{ background: var(--warn); box-shadow: 0 0 10px rgba(255,204,74,.28); }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 150px 1fr;
+      gap: 10px 12px;
+      font-size: 12px;
+    }
+    .kv .k{
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .10em;
+      font-size: 11px;
+    }
+    .kv .v{ color: var(--ink); word-break: break-word; }
+
+    .mono-dim{ color: var(--dim); }
+
+    .blink{
+      display:inline-block;
+      width: 9px; height: 14px;
+      background: var(--good);
+      margin-left: 6px;
+      opacity:.55;
+      animation: blink 1.2s infinite steps(1,end);
+      box-shadow: 0 0 10px rgba(67,255,142,.25);
+    }
+    @keyframes blink{ 0%,49%{opacity:.55} 50%,100%{opacity:0} }
+
+    .menu{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .menu .item{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(0,0,0,.20);
+      cursor:pointer;
+      min-width: 0;
+    }
+    .menu .item:hover{ box-shadow: var(--glow); filter: brightness(1.08); }
+    .menu .item:active{ transform: translateY(1px); }
+
+    .menu .left{
+      display:flex; gap:10px; align-items:flex-start;
+      min-width: 0;
+    }
+    .code{
+      color: var(--muted);
+      letter-spacing:.10em;
+      min-width: 54px;
+      text-transform: uppercase;
+      flex: 0 0 auto;
+    }
+    .label{
+      display:flex; flex-direction:column; gap:4px;
+      min-width: 0;
+    }
+    .label .name{
+      font-weight: 800;
+      letter-spacing:.06em;
+      text-transform: uppercase;
+      word-break: break-word;
+    }
+    .label .desc{
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing:.02em;
+      word-break: break-word;
+    }
+    .right{
+      display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+      min-width: 130px;
+      flex: 0 0 auto;
+    }
+
+    .severity{
+      font-size: 10px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      letter-spacing:.10em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(0,0,0,.25);
+      white-space:nowrap;
+    }
+    .severity.minor b{ color: var(--good); }
+    .severity.medium b{ color: var(--warn); }
+    .severity.major b{ color: var(--bad); }
+
+    .pill{
+      font-size: 10px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      letter-spacing:.10em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(0,0,0,.18);
+      white-space:nowrap;
+    }
+
+    .stack{ display:grid; gap: 16px; min-width: 0; }
+
+    .bighead{
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 10px 0;
+    }
+    .h1{
+      font-size: 18px;
+      margin: 0 0 10px 0;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-weight: 900;
+      word-break: break-word;
+    }
+    .p{
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      color: var(--ink);
+    }
+    .blockquote{
+      margin: 12px 0;
+      border-left: 2px solid var(--border);
+      padding: 10px 12px;
+      background: rgba(0,0,0,.22);
+      border-radius: 10px;
+      color: var(--ink);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .blockquote .q{ font-size: 12px; letter-spacing:.03em; }
+    .blockquote .meta{
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+    }
+
+    .log{
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      height: 240px;
+      overflow:auto;
+      box-shadow: var(--shadow);
+      min-width: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .log .t{ color: var(--dim); }
+    .log .ok{ color: var(--good); }
+    .log .wr{ color: var(--warn); }
+    .log .bd{ color: var(--bad); }
+    .log .id{ color: var(--cyan); }
+
+    .prompt{
+      margin-top: 12px;
+      display:flex; align-items:center; gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(0,0,0,.25);
+      color: var(--muted);
+      font-size: 12px;
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+    }
+    .prompt .path{ color: var(--ink); }
+    .prompt input{
+      flex:1 1 180px;
+      min-width: 160px;
+      border:0;
+      outline:none;
+      background: transparent;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing:.02em;
+    }
+    .prompt .hint{
+      color: var(--dim);
+      font-size: 11px;
+      white-space:nowrap;
+    }
+
+    .buried{
+      color: rgba(180,200,190,.28);
+      font-size: 10px;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+      margin-top: 10px;
+      user-select:none;
+    }
+
+    @media (max-width: 520px){
+      .windowbar-inner{ padding: 10px 12px; }
+      main{ padding: 14px 12px 34px; }
+      .panel-body{ padding: 12px; }
+      .panel-header{ padding: 10px 12px; }
+
+      .title{ flex: 1 1 100%; min-width: 0; }
+      .toggles{ width: 100%; justify-content:flex-start; gap:8px; }
+
+      .btn{ padding: 7px 9px; font-size: 11px; }
+
+      .kv{ grid-template-columns: 1fr; }
+      .kv .k{ font-size: 10px; }
+      .kv .v{ font-size: 12px; }
+
+      .ascii{ font-size: 10px; }
+
+      .menu .item{ flex-direction: column; }
+      .right{
+        width: 100%;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items:center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .code{ min-width: 44px; }
+      .h1{ font-size: 16px; }
+      .log{ height: 220px; }
+    }
+
+    .acc-toggle{
+      display:none;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+
+    .accordion .acc-panel .panel-body{
+      display:none;
+    }
+    .accordion .acc-panel.open .panel-body{
+      display:block;
+    }
+
+    .acc-panel .panel-header{
+      cursor:pointer;
+      user-select:none;
+    }
+    .acc-chevron{
+      color: var(--muted);
+      letter-spacing:.10em;
+      font-size: 11px;
+      text-transform: uppercase;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+    }
+    .acc-chevron .tri{
+      display:inline-block;
+      width: 0; height: 0;
+      border-left: 6px solid var(--muted);
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      transform: rotate(0deg);
+      opacity: .9;
+    }
+    .acc-panel.open .acc-chevron .tri{
+      transform: rotate(90deg);
+    }
+
+    @media (max-width: 980px){
+      .acc-toggle{ display:block; }
+    }
+  </style>
+</head>
+
+<body class="crt">
+  <div class="windowbar">
+    <div class="windowbar-inner">
+      <div class="dots" aria-hidden="true">
+        <span class="dot red"></span>
+        <span class="dot yel"></span>
+        <span class="dot grn"></span>
+      </div>
+
+      <div class="title">
+        DEEP WEB GALLERY TERMINAL // DWG-CICFA-01 // STATUS: <span id="statusTxt">IDLE</span>
+      </div>
+
+      <div class="toggles">
+        <a class="btn" href="../../" title="back to the live bounty site">&laquo; LIVE SITE</a>
+        <button class="btn" id="themeBtn" type="button">THEME: GREEN</button>
+        <button class="btn" id="noiseBtn" type="button">CRT: ON</button>
+        <button class="btn acc-toggle" id="compactBtn" type="button">COMPACT MODE: OFF</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">PROGRAM CONSOLE</div>
+          <div class="ascii" style="margin-top:10px;">
+   ____ ___ ____ _____    _
+  / ___|_ _/ ___|  ___|  / \
+ | |    | | |   | |_    / _ \
+ | |___ | | |___|  _|  / ___ \
+  \____|___\____|_|   /_/   \_\
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+          <span class="tag warn"><span class="dotmini"></span> <b>PUBLIC</b> / RESTRICTED / INTERNAL / BLACK</span>
+          <span class="tag bad"><span class="dotmini"></span> <b>EXPERIMENTAL</b> SURFACE</span>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <div class="kv">
+          <div class="k">PROGRAM CODE</div><div class="v">DWG-CICFA-01</div>
+          <div class="k">FILE TYPE</div><div class="v">Cultural / Operational / Informative / Speculative</div>
+          <div class="k">VERSION</div><div class="v">vB.01</div>
+          <div class="k">LAST UPDATE</div><div class="v">2026-05-22</div>
+          <div class="k">MAINTAINED BY</div><div class="v">@MarketDepravation</div>
+          <div class="k">ACTIVE TITLE</div>
+          <div class="v"><span class="glitch" data-text="CULTURAL INFRASTRUCTURE CRITICAL FAILURE ATTACK_vB.01">CULTURAL INFRASTRUCTURE CRITICAL FAILURE ATTACK_vB.01</span></div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="ascii">
+┌───────────────────────────────────────────────────────────────┐
+│  NOTE: THIS CONSOLE IS A CULTURAL CONTROL SURFACE.            │
+│  IT LOGS SYMBOLIC OPERATIONS. IT DOES NOT EXECUTE REAL ONES.  │
+└───────────────────────────────────────────────────────────────┘
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="panel-title" style="margin-bottom:10px;">OPERATIONS BOARD</div>
+
+        <div class="menu" role="list">
+          <div class="item" role="listitem" data-op="OP-01">
+            <div class="left">
+              <div class="code">[01]</div>
+              <div class="label">
+                <div class="name">LOCK CURATORIAL STATEMENT</div>
+                <div class="desc">Replace interpretive language with an incident report loop.</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="severity minor"><b>MINOR</b> OPERATION</span>
+              <span class="pill">SYMBOLIC</span>
+            </div>
+          </div>
+
+          <div class="item" role="listitem" data-op="OP-02">
+            <div class="left">
+              <div class="code">[02]</div>
+              <div class="label">
+                <div class="name">FREEZE DONOR NARRATIVES</div>
+                <div class="desc">Convert sponsorship to a visible dependency graph.</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="severity medium"><b>MEDIUM</b> OPERATION</span>
+              <span class="pill">SIMULATED</span>
+            </div>
+          </div>
+
+          <div class="item" role="listitem" data-op="OP-03">
+            <div class="left">
+              <div class="code">[03]</div>
+              <div class="label">
+                <div class="name">COUNTDOWN TO NOTHING</div>
+                <div class="desc">Deadline aesthetics; no resolution; only logging.</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="severity medium"><b>MEDIUM</b> OPERATION</span>
+              <span class="pill">PERFORMATIVE</span>
+            </div>
+          </div>
+
+          <div class="item" role="listitem" data-op="OP-04">
+            <div class="left">
+              <div class="code">[04]</div>
+              <div class="label">
+                <div class="name">BROKEN API GOVERNANCE MAP</div>
+                <div class="desc">Render committees as endpoints returning 500 errors.</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="severity major"><b>MAJOR</b> OPERATION</span>
+              <span class="pill">ARCHIVED</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="prompt" aria-label="terminal prompt">
+          <span class="mono-dim">┌─(</span><span class="path">DWG@cicfa</span><span class="mono-dim">)-[</span>
+          <span class="path">/operations</span><span class="mono-dim">]</span>
+          <span class="mono-dim">$</span>
+          <input id="cmd" placeholder="type: help / ops / bounty / log / status" />
+          <span class="hint">ENTER ↵</span><span class="blink" aria-hidden="true"></span>
+        </div>
+
+        <div class="buried">
+          This interface is a speculative artwork. It does not deploy malware or interfere with live systems.
+        </div>
+      </div>
+    </section>
+
+    <section class="stack" id="rightStack">
+
+      <section class="panel acc-panel" data-acc="framing">
+        <div class="panel-header">
+          <div class="panel-title">FRAMING / THREAT MODEL AS AESTHETIC</div>
+          <div class="acc-chevron" aria-hidden="true">
+            <span class="tri"></span><span>TOGGLE</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <h1 class="h1">FRAMING THE PROGRAM</h1>
+
+          <p class="p">
+            Think of the program not as <b>attacking institutions</b>, but as:
+          </p>
+
+          <div class="blockquote">
+            <div class="q">
+              &ldquo;Making institutions experience the <b>aesthetic</b>, <b>symbolic</b>, and <b>procedural</b> logic of cyber-attacks.&rdquo;
+            </div>
+            <div class="meta">OPERATIONAL PHILOSOPHY // NO FIX, ONLY EXPOSURE</div>
+          </div>
+
+          <p class="p">The artwork is the system under stress:</p>
+          <div class="ascii">
+- threat model
+- interface
+- economy
+- spectacle of vulnerability
+- ritualization of cyber violence as cultural assets
+          </div>
+
+          <div class="hr"></div>
+
+          <h2 class="bighead">CONCEPT STACK (ACTIVE / DORMANT)</h2>
+          <div class="ascii">
+[01] INSTITUTIONAL ATTACK SURFACE
+[02] RANSOMWARE AS A CULTURAL SERVICE
+[03] THE MUSEUM IS A BROKEN DYNAMIC
+[04] CULTURAL INFRASTRUCTURE STRESS TEST
+[05] BOYCOTTWARE&trade;
+          </div>
+        </div>
+      </section>
+
+      <section class="panel acc-panel" data-acc="bounty">
+        <div class="panel-header">
+          <div class="panel-title">BOUNTY LAYER / REPUTATIONAL ECONOMY</div>
+          <div class="acc-chevron" aria-hidden="true">
+            <span class="tri"></span><span>TOGGLE</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="ascii">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ BUG BOUNTIES & CAPTURE THE FLAG (CTF) MISSIONS                              │
+│ ONLY TO FIND ON THE DEEP WEB AND DARK WEB NODES                             │
+│ REWARDS: EDITIONS / CREDITS / ARCHIVAL INCLUSION / PRODUCER FEES            │
+└─────────────────────────────────────────────────────────────────────────────┘
+          </div>
+
+          <div class="menu" style="margin-top:10px;">
+            <div class="item" data-op="B-01">
+              <div class="left">
+                <div class="code">[B1]</div>
+                <div class="label">
+                  <div class="name">SECURITY AUDIT AS DRAMATURGY</div>
+                  <div class="desc">Write a speculative audit that reads like theatre.</div>
+                </div>
+              </div>
+              <div class="right">
+                <span class="severity minor"><b>MINOR</b> BOUNTY</span>
+                <span class="pill">NON-EXECUTABLE</span>
+              </div>
+            </div>
+
+            <div class="item" data-op="B-02">
+              <div class="left">
+                <div class="code">[B2]</div>
+                <div class="label">
+                  <div class="name">MALWARE UX (FICTIONAL)</div>
+                  <div class="desc">Design a ransom UI that critiques value &amp; language.</div>
+                </div>
+              </div>
+              <div class="right">
+                <span class="severity medium"><b>MEDIUM</b> BOUNTY</span>
+                <span class="pill">DESIGN RESEARCH</span>
+              </div>
+            </div>
+
+            <div class="item" data-op="B-03">
+              <div class="left">
+                <div class="code">[B3]</div>
+                <div class="label">
+                  <div class="name">POWER FAILURE DIAGRAM</div>
+                  <div class="desc">Map governance as broken endpoints &amp; feedback loops.</div>
+                </div>
+              </div>
+              <div class="right">
+                <span class="severity major"><b>MAJOR</b> BOUNTY</span>
+                <span class="pill">ARCHIVE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel acc-panel open" data-acc="log">
+        <div class="panel-header">
+          <div class="panel-title">INCIDENT LOG / POST-MORTEM STREAM</div>
+          <div class="acc-chevron" aria-hidden="true">
+            <span class="tri"></span><span>TOGGLE</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="log" id="log">
+            <div><span class="t">[2026-05-22 00:00:01]</span> <span class="id">DWG-CICFA-01</span> :: boot sequence initiated</div>
+            <div><span class="t">[2026-05-22 00:00:02]</span> status=<span class="wr">IDLE</span> clearance=<span class="ok">PUBLIC</span></div>
+            <div><span class="t">[2026-05-22 00:00:03]</span> loading deep-web-gallery overlays&hellip; <span class="ok">OK</span></div>
+            <div><span class="t">[2026-05-22 00:00:05]</span> operations board online&hellip; <span class="ok">OK</span></div>
+            <div><span class="t">[2026-05-22 00:00:06]</span> basic text edit &hellip; <span class="ok">OK</span></div>
+            <div><span class="t">[2026-05-22 00:00:07]</span> bounty layer hydrated&hellip; <span class="ok">OK</span></div>
+            <div><span class="t">[2026-05-22 00:00:10]</span> warning: resolution is not a deliverable <span class="wr">WARN</span></div>
+            <div><span class="t">[2026-05-22 00:00:12]</span> note: nothing is destroyed; everything is revealed <span class="ok">OK</span></div>
+            <div><span class="t">[2026-05-22 00:00:14]</span> signal: cultural infrastructure under stress <span class="bd">CRITICAL</span></div>
+          </div>
+
+          <div class="ascii" style="margin-top:12px;">
+┌───────────────────────────────────────────────────────────────┐
+│ INPUT CHANNEL: TEXT ONLY                                      │
+│ OUTPUT: LOGGED ARTIFACTS / VISUAL STATES / ARCHIVE ENTRIES    │
+└───────────────────────────────────────────────────────────────┘
+          </div>
+        </div>
+      </section>
+
+    </section>
+  </main>
+
+  <script>
+    const themeBtn = document.getElementById('themeBtn');
+    const noiseBtn = document.getElementById('noiseBtn');
+    const compactBtn = document.getElementById('compactBtn');
+
+    const statusTxt = document.getElementById('statusTxt');
+    const logEl = document.getElementById('log');
+    const cmd = document.getElementById('cmd');
+
+    const rightStack = document.getElementById('rightStack');
+    const accPanels = Array.from(document.querySelectorAll('.acc-panel'));
+
+    let theme = 'green';
+    document.documentElement.setAttribute('data-theme', theme);
+    themeBtn.addEventListener('click', () => {
+      theme = (theme === 'green') ? 'red' : 'green';
+      document.documentElement.setAttribute('data-theme', theme);
+      themeBtn.textContent = `THEME: ${theme.toUpperCase()}`;
+      addLog(`ui: theme switched -> ${theme.toUpperCase()}`, 'ok');
+    });
+
+    let crtOn = true;
+    noiseBtn.addEventListener('click', () => {
+      crtOn = !crtOn;
+      document.body.classList.toggle('crt', crtOn);
+      noiseBtn.textContent = `CRT: ${crtOn ? 'ON' : 'OFF'}`;
+      addLog(`ui: crt overlay -> ${crtOn ? 'ENABLED' : 'DISABLED'}`, 'wr');
+    });
+
+    document.querySelectorAll('[data-op]').forEach(el => {
+      el.addEventListener('click', () => {
+        addLog(`selection: ${el.getAttribute('data-op')} :: artifact logged`, 'id');
+      });
+    });
+
+    cmd.addEventListener('keydown', (e) => {
+      if(e.key !== 'Enter') return;
+      const v = (cmd.value || '').trim().toLowerCase();
+      cmd.value = '';
+      if(!v) return;
+
+      addLog(`$ ${v}`, 't');
+
+      if(v === 'help'){
+        addLog(`commands: help / ops / bounty / log / status / clear`, 'ok');
+        return;
+      }
+      if(v === 'status'){
+        addLog(`status=${statusTxt.textContent} version=vB.01 program=DWG-CICFA-01`, 'wr');
+        return;
+      }
+      if(v === 'ops'){
+        addLog(`ops: [01] lock curatorial statement | [02] freeze donor narratives | [03] countdown to nothing | [04] broken api governance map`, 'id');
+        return;
+      }
+      if(v === 'bounty'){
+        addLog(`bounties: [B1] audit-as-dramaturgy | [B2] malware-ux-fictional | [B3] power-failure-diagram`, 'id');
+        return;
+      }
+      if(v === 'log'){
+        addLog(`log stream is live; resolution is not a deliverable`, 'wr');
+        return;
+      }
+      if(v === 'clear'){
+        logEl.innerHTML = '';
+        addLog(`log cleared`, 'ok');
+        return;
+      }
+
+      addLog(`unknown command: "${v}" (type: help)`, 'bd');
+    });
+
+    function addLog(text, cls){
+      if(!logEl) return;
+      const line = document.createElement('div');
+      const ts = new Date().toISOString().replace('T',' ').slice(0,19);
+      line.innerHTML = `<span class="t">[${ts}]</span> <span class="${cls}">${escapeHtml(text)}</span>`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    let compactOn = false;
+
+    function shouldAutoCompact(){
+      return window.matchMedia('(max-width: 980px)').matches;
+    }
+
+    function setCompact(on){
+      compactOn = on;
+
+      if(compactOn){
+        rightStack.classList.add('accordion');
+        compactBtn.textContent = 'COMPACT MODE: ON';
+
+        accPanels.forEach(p => p.classList.remove('open'));
+        const logPanel = document.querySelector('.acc-panel[data-acc="log"]');
+        if(logPanel) logPanel.classList.add('open');
+
+        addLog(`ui: compact mode -> ENABLED`, 'wr');
+      } else {
+        rightStack.classList.remove('accordion');
+        compactBtn.textContent = 'COMPACT MODE: OFF';
+
+        accPanels.forEach(p => p.classList.add('open'));
+
+        addLog(`ui: compact mode -> DISABLED`, 'wr');
+      }
+    }
+
+    compactBtn.addEventListener('click', () => setCompact(!compactOn));
+
+    accPanels.forEach(panel => {
+      const header = panel.querySelector('.panel-header');
+      header.addEventListener('click', () => {
+        if(!compactOn) return;
+
+        const isOpen = panel.classList.contains('open');
+
+        accPanels.forEach(p => p.classList.remove('open'));
+        if(!isOpen) panel.classList.add('open');
+
+        if(panel.getAttribute('data-acc') === 'log'){
+          setTimeout(() => { if(logEl) logEl.scrollTop = logEl.scrollHeight; }, 0);
+        }
+      });
+    });
+
+    accPanels.forEach(p => p.classList.add('open'));
+
+    function syncAutoCompact(){
+      if(shouldAutoCompact()){
+        if(!compactOn) setCompact(true);
+        compactBtn.style.display = 'inline-block';
+      } else {
+        compactBtn.style.display = 'none';
+        if(compactOn) setCompact(false);
+      }
+    }
+
+    window.addEventListener('resize', syncAutoCompact);
+    syncAutoCompact();
+  </script>
+</body>
+</html>

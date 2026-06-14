@@ -34,6 +34,20 @@
 
 ---
 
+## `> WHERE TO GO`
+
+```
+NEW HERE?              →  onboarding/             # boot sequence
+OPERATING?             →  workflows/              # runbooks
+ROLES?                 →  agents/                 # who does what
+INTERNALS / KERNEL?    →  CLAUDE.md               # OS map
+LIVE SITE?             →  https://deep-web-gallery.github.io/CICFA/
+```
+
+This repo is the **CICFA OS** — the operative system that coordinates the program. Structure: `CLAUDE.md` (kernel) + `workflows/` (W) + `agents/` (A) + `tools/` (T). See `CLAUDE.md` for the full architecture.
+
+---
+
 ## `> BOUNTY PROGRAM — OPERATION 001`
 
 ```
@@ -186,6 +200,6 @@ PARENT_PROCESSES [
 ```
 
 **Maintained by [@MarketDepravation](https://github.com/boris-maker)**
-`DWG-CICFA-01` &nbsp;·&nbsp; [Web Interface](https://deep-web-gallery.github.io/CICFA/) &nbsp;·&nbsp; [Operational Repo](https://github.com/boris-maker/DWG_AGENTS-TEST)
+`DWG-CICFA-01` &nbsp;·&nbsp; [Web Interface](https://deep-web-gallery.github.io/CICFA/) &nbsp;·&nbsp; [Onboarding](./onboarding/) &nbsp;·&nbsp; [Workflows](./workflows/) &nbsp;·&nbsp; [Kernel](./CLAUDE.md)
 
 </div>
