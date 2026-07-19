@@ -1644,7 +1644,39 @@ function toggleQR() {
 /* ── COPY ADDRESS ────────────────────────────────────────────── */
 function copyAddress() {
   if (!CICFA.walletAddress) return;
-  navigator.clipboard.writeText(CICFA.walletAddress).then(() => showToast('ADDRESS COPIED'));
+  const addr = CICFA.walletAddress;
+
+  // Legacy path: async clipboard is undefined in non-secure contexts and some
+  // privacy/in-app browsers, and can reject even when present (permission
+  // blocked). Fall back to a temporary textarea + execCommand so the site's
+  // primary donation action still copies — and always give feedback, since the
+  // old code left the button silently doing nothing on any failure.
+  function legacyCopy() {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = addr;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, addr.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast(ok ? 'ADDRESS COPIED' : 'COPY FAILED — SELECT MANUALLY');
+    } catch (e) {
+      showToast('COPY FAILED — SELECT MANUALLY');
+    }
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(addr)
+      .then(() => showToast('ADDRESS COPIED'))
+      .catch(legacyCopy);
+  } else {
+    legacyCopy();
+  }
 }
 
 /* ── TOAST ───────────────────────────────────────────────────── */
