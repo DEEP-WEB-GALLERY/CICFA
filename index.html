@@ -1503,10 +1503,19 @@ function closeBreach() {
     return;
   }
 
+  // fetch() has no default timeout, so a provider that hangs (accepts the
+  // connection but never responds — a partial outage / rate-limit stall, not a
+  // clean failure) would block the loop indefinitely and the fallback list below
+  // would never be reached, leaving the pot stuck on the "···" placeholder. Abort
+  // each request after this many ms so a slow endpoint falls through to the next.
+  const RPC_TIMEOUT_MS = 8000;
+
   async function fetchBalance() {
     // Try each RPC in turn; return on the first valid result so a single
-    // provider outage doesn't blank the pot.
+    // provider outage — or hang, via the timeout above — doesn't blank the pot.
     for (const rpc of rpcs) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), RPC_TIMEOUT_MS);
       try {
         const res = await fetch(rpc, {
           method: 'POST',
@@ -1516,7 +1525,8 @@ function closeBreach() {
             method: 'eth_getBalance',
             params: [addr, 'latest'],
             id: 1
-          })
+          }),
+          signal: ctrl.signal
         });
         const data = await res.json();
         if (data && data.result) {
@@ -1524,7 +1534,8 @@ function closeBreach() {
           const eth = Number(wei) / 1e18;
           return eth;
         }
-      } catch(e) { /* try next endpoint */ }
+      } catch(e) { /* timed out or errored — try next endpoint */ }
+      finally { clearTimeout(timer); }
     }
     return null;
   }
