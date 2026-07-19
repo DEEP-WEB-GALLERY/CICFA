@@ -1529,13 +1529,22 @@ function closeBreach() {
     return null;
   }
 
-  function animateValue(el, from, to, duration) {
+  // Pick enough decimals that a small but non-zero balance stays visible.
+  // toFixed(4) floors any pot under 0.0001 ETH to "0.0000", which made a real
+  // 21 µETH contribution render as an empty pot. Normal pots (>= 0.0001) keep 4dp.
+  function ethDecimals(v) {
+    if (!v || v >= 0.0001) return 4;
+    return Math.min(18, Math.ceil(-Math.log10(v)) + 2);
+  }
+
+  function animateValue(el, from, to, duration, decimals) {
+    const dp = decimals != null ? decimals : 4;
     const start = performance.now();
     function step(now) {
       const progress = Math.min((now - start) / duration, 1);
       const ease = 1 - Math.pow(1 - progress, 3);
       const current = from + (to - from) * ease;
-      el.textContent = current.toFixed(4);
+      el.textContent = current.toFixed(dp);
       if (progress < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
@@ -1545,10 +1554,11 @@ function closeBreach() {
     const bal = await fetchBalance();
     amtEl.classList.remove('loading');
     if (bal !== null) {
-      animateValue(valEl, 0, bal, 1800);
+      const dp = ethDecimals(bal);
+      animateValue(valEl, 0, bal, 1800, dp);
       const pct = Math.min((bal / target) * 100, 100);
       setTimeout(() => fillEl.style.width = pct + '%', 200);
-      goalEl.textContent = `${bal.toFixed(4)} / ${target} ETH GOAL`;
+      goalEl.textContent = `${bal.toFixed(dp)} / ${target} ETH GOAL`;
       const cnt = staticContributors || 0;
       contEl.textContent = cnt > 0 ? `${cnt} CONTRIBUTOR${cnt !== 1 ? 'S' : ''}` : 'BE THE FIRST CONTRIBUTOR';
     } else {
