@@ -1314,7 +1314,10 @@
 const CICFA = {
   walletAddress:   "0x7fC76C439c200151Dde0345B09BA02764B9143Ec",
   walletEns:       "",
-  rpcUrl:          "https://cloudflare-eth.com",
+  // Tried in order until one returns a balance. Public, keyless endpoints only —
+  // if the first is down or rate-limited, the next is used (cloudflare-eth.com was
+  // retired and returned -32603, which silently broke the pot display).
+  rpcUrls:         ["https://ethereum-rpc.publicnode.com", "https://eth.drpc.org", "https://1rpc.io/eth", "https://eth.rpc.blxrbdn.com"],
   targetAmountEth: 1.0,
   deadlineIso:     "",
   submissionUrl:   "https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=submission.yml",
@@ -1479,7 +1482,7 @@ function closeBreach() {
 /* ── LIVE ETH BALANCE ────────────────────────────────────────── */
 (function() {
   const addr   = CICFA.walletAddress;
-  const rpc    = CICFA.rpcUrl;
+  const rpcs   = CICFA.rpcUrls || (CICFA.rpcUrl ? [CICFA.rpcUrl] : []);
   const target = CICFA.targetAmountEth;
   const valEl  = document.getElementById('pot-value');
   const amtEl  = document.getElementById('pot-amount');
@@ -1487,8 +1490,10 @@ function closeBreach() {
   const goalEl = document.getElementById('pot-goal');
   const contEl = document.getElementById('pot-contributors');
 
-  // Count contributors from config
-  const staticContributors = document.querySelectorAll('#contributors-body tr td:first-child').length;
+  // Count real contributor rows, excluding the "NO CONTRIBUTORS YET" placeholder
+  // (its single colspan cell was being counted as one contributor).
+  const staticContributors = [...document.querySelectorAll('#contributors-body tr')]
+    .filter(tr => !tr.querySelector('.contributors-empty')).length;
 
   if (!addr) {
     valEl.textContent = '0.000';
@@ -1499,24 +1504,28 @@ function closeBreach() {
   }
 
   async function fetchBalance() {
-    try {
-      const res = await fetch(rpc, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_getBalance',
-          params: [addr, 'latest'],
-          id: 1
-        })
-      });
-      const data = await res.json();
-      if (data.result) {
-        const wei = BigInt(data.result);
-        const eth = Number(wei) / 1e18;
-        return eth;
-      }
-    } catch(e) { /* fall through */ }
+    // Try each RPC in turn; return on the first valid result so a single
+    // provider outage doesn't blank the pot.
+    for (const rpc of rpcs) {
+      try {
+        const res = await fetch(rpc, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_getBalance',
+            params: [addr, 'latest'],
+            id: 1
+          })
+        });
+        const data = await res.json();
+        if (data && data.result) {
+          const wei = BigInt(data.result);
+          const eth = Number(wei) / 1e18;
+          return eth;
+        }
+      } catch(e) { /* try next endpoint */ }
+    }
     return null;
   }
 

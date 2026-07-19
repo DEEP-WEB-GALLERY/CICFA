@@ -71,7 +71,7 @@ If the new version isn't showing after 5 minutes:
 | Pitfall | Why it bites | What to do |
 |---|---|---|
 | Editing `index.html` on a feature branch | Pages only serves `main`. Branch changes are invisible. | Merge to `main` or push direct to `main`. |
-| Breaking the JSON-RPC URL for `eth_getBalance` | Bounty pool shows `···` permanently | Confirm the RPC endpoint (`https://cloudflare-eth.com` or equivalent) responds. |
+| Breaking the JSON-RPC URL for `eth_getBalance` | Bounty pool shows `···` permanently | `CICFA.rpcUrls` holds a fallback list (publicnode / drpc / 1rpc / blxrbdn). Test each with a `curl` `eth_getBalance` POST; drop dead ones. Do **not** re-add `cloudflare-eth.com` — its public gateway was retired and returns `-32603`. |
 | Hardcoding `localhost:8000` in a deployed file | Site loads but JS fails | Search/replace before commit. |
 | Renaming `index.html` to `index.htm` or similar | Pages won't serve it | The file at the served path must literally be named `index.html`. |
 | Putting deploy assets in `gh-pages` branch | This repo deploys from `main`. `gh-pages` is ignored. | Use `main`. |
