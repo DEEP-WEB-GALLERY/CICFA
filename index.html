@@ -1550,12 +1550,22 @@ function closeBreach() {
     requestAnimationFrame(step);
   }
 
+  // Remember the last balance we rendered so the 60s refresh animates from the
+  // previous value, not from 0. Otherwise every poll makes the pot visibly drop
+  // to 0.0000 and climb back over 1.8s even when nothing changed — flashing the
+  // central feature "empty" once a minute. null means "not yet rendered / last
+  // fetch failed", so the next success animates up from 0 as on first load.
+  let lastRendered = null;
+
   async function update() {
     const bal = await fetchBalance();
     amtEl.classList.remove('loading');
     if (bal !== null) {
       const dp = ethDecimals(bal);
-      animateValue(valEl, 0, bal, 1800, dp);
+      const from = lastRendered === null ? 0 : lastRendered;
+      if (from !== bal) animateValue(valEl, from, bal, 1800, dp);
+      else valEl.textContent = bal.toFixed(dp);
+      lastRendered = bal;
       const pct = Math.min((bal / target) * 100, 100);
       setTimeout(() => fillEl.style.width = pct + '%', 200);
       goalEl.textContent = `${bal.toFixed(dp)} / ${target} ETH GOAL`;
@@ -1569,6 +1579,7 @@ function closeBreach() {
         : (bal > 0 ? 'CONTRIBUTIONS RECEIVED — SEE ETHERSCAN' : 'BE THE FIRST CONTRIBUTOR');
     } else {
       valEl.textContent = '0.000';
+      lastRendered = null; // recovered fetch should animate up from 0 again
       contEl.textContent = 'UNABLE TO FETCH BALANCE — CHECK ETHERSCAN';
       goalEl.textContent = `GOAL: Ξ ${target}`;
     }
