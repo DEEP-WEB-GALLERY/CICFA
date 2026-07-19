@@ -1559,8 +1559,14 @@ function closeBreach() {
       const pct = Math.min((bal / target) * 100, 100);
       setTimeout(() => fillEl.style.width = pct + '%', 200);
       goalEl.textContent = `${bal.toFixed(dp)} / ${target} ETH GOAL`;
+      // The contributor table is maintained by hand; eth_getBalance can't name
+      // senders. So when the pot is non-empty but no rows are listed, don't claim
+      // "BE THE FIRST CONTRIBUTOR" — that contradicts a balance that's demonstrably
+      // on-chain. Point curious viewers at Etherscan, the source of truth.
       const cnt = staticContributors || 0;
-      contEl.textContent = cnt > 0 ? `${cnt} CONTRIBUTOR${cnt !== 1 ? 'S' : ''}` : 'BE THE FIRST CONTRIBUTOR';
+      contEl.textContent = cnt > 0
+        ? `${cnt} CONTRIBUTOR${cnt !== 1 ? 'S' : ''}`
+        : (bal > 0 ? 'CONTRIBUTIONS RECEIVED — SEE ETHERSCAN' : 'BE THE FIRST CONTRIBUTOR');
     } else {
       valEl.textContent = '0.000';
       contEl.textContent = 'UNABLE TO FETCH BALANCE — CHECK ETHERSCAN';
