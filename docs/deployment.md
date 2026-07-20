@@ -71,11 +71,42 @@ If the new version isn't showing after 5 minutes:
 | Pitfall | Why it bites | What to do |
 |---|---|---|
 | Editing `index.html` on a feature branch | Pages only serves `main`. Branch changes are invisible. | Merge to `main` or push direct to `main`. |
-| Breaking the JSON-RPC URL for `eth_getBalance` | Bounty pool shows `···` permanently | `CICFA.rpcUrls` holds a fallback list (publicnode / drpc / 1rpc / blxrbdn). Test each with a `curl` `eth_getBalance` POST; drop dead ones. Do **not** re-add `cloudflare-eth.com` — its public gateway was retired and returns `-32603`. |
+| Breaking the JSON-RPC URL for `eth_getBalance` | Bounty pool shows `···` permanently | `CICFA.rpcUrls` holds a fallback list (publicnode / drpc / blastapi / blxrbdn). Test each with a `curl` `eth_getBalance` POST; drop dead ones. Don't re-add `cloudflare-eth.com` (public gateway retired, `-32603`) or `1rpc.io` (rate-limited from shared IPs, `-32005` — DEE-23). Easiest check: run `scripts/healthcheck.sh` (see Health monitoring below), which probes every configured RPC for balance + CORS from the live origin. |
 | Hardcoding `localhost:8000` in a deployed file | Site loads but JS fails | Search/replace before commit. |
 | Renaming `index.html` to `index.htm` or similar | Pages won't serve it | The file at the served path must literally be named `index.html`. |
 | Putting deploy assets in `gh-pages` branch | This repo deploys from `main`. `gh-pages` is ignored. | Use `main`. |
 | Removing `index.html` to "clean up" | The whole site 404s | Don't. |
+
+---
+
+## Health monitoring
+
+Two layers, by design — one catches browser-only failures, the other runs unattended.
+
+**`scripts/healthcheck.sh` — the local maintenance pass (residential IP).**
+Reproduces the manual checklist that has caught every past regression (DEE-14 dead
+`cloudflare-eth`, DEE-23 rate-limited `1rpc.io`): live site 200, repo in sync, inline
+JS parses, **every configured RPC returns the balance AND is CORS-usable from the live
+origin and they all agree**, QR CDN reachable, issue templates present in repo + live,
+every `target="_blank"` carries `rel="noopener"`. Config is parsed straight out of
+`index.html`, so the check can't drift from what the page ships. Exit 0 = all green,
+1 = a hard check failed. Transient blips (curl 000 / 5xx / 429) are retried before they
+count, so a one-shot network hiccup can't false-FAIL. Run it each maintenance pass:
+
+```bash
+scripts/healthcheck.sh          # full pass — the RPC/CORS probe only works from a residential IP
+```
+
+**`.github/workflows/healthcheck.yml` — the scheduled monitor (cloud IP).**
+Runs the same script daily at 06:17 UTC (and on-demand via *Run workflow*) with
+`HEALTHCHECK_SKIP_RPC=1`. The RPC probe is deliberately skipped in CI: free public
+RPCs block datacenter egress, so from a runner all four return non-JSON challenge bodies
+that read as a total outage — a false FAIL, and a cloud-IP curl isn't a faithful *browser*
+drift signal anyway. So the Action covers the cloud-IP-valid signals (site 200, JS,
+CDN, templates, anchors) and a red run is a genuine outage → failed-run notification.
+**RPC/CORS drift is only caught by the local pass** — run `healthcheck.sh` (env unset)
+each heartbeat. Note: GitHub disables scheduled workflows after 60 days of repo
+inactivity; if runs stop appearing, re-enable on the Actions tab or push a commit.
 
 ---
 
