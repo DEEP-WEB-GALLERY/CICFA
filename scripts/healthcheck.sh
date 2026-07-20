@@ -19,6 +19,9 @@
 #
 # Exit 0 if all green, 1 if any hard check is red, 2 on fatal setup error.
 # WARN lines are non-fatal (e.g. one degraded RPC while the chain stays usable).
+# Every HTTP/RPC check retries transient failures (HTTP_RETRIES x RETRY_SLEEP)
+# before it counts, so a one-shot network blip (curl 000 / 5xx / 429) can never
+# flip a healthy site to a red FAIL — the exit code is safe for a scheduled monitor.
 #
 # Usage:  scripts/healthcheck.sh
 # ─────────────────────────────────────────────────────────────────────────────
@@ -31,13 +34,28 @@ ORIGIN="https://deep-web-gallery.github.io"
 RAW_BASE="https://raw.githubusercontent.com/DEEP-WEB-GALLERY/CICFA/main"
 QR_CDN="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
 CURL_MAX=12
+HTTP_RETRIES=3      # transient blips (curl 000 / 5xx / 429) get retried this many times
+RETRY_SLEEP=2       # seconds between retries — a one-shot blip must not read as an outage
 
 fail=0
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
 warn() { printf '  \033[33mWARN\033[0m  %s\n' "$1"; }
 red()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; fail=1; }
 sec()  { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
-httpcode() { curl -s -o /dev/null -m "$CURL_MAX" -w '%{http_code}' "$1"; }
+
+# GET a URL and echo its HTTP status. Returns the instant it sees 200; on any
+# other code (000 connection-fail, 5xx, 429) it retries up to HTTP_RETRIES times
+# so a single transient blip can't flip a healthy site to a red FAIL. Echoes the
+# last code seen if every attempt fails. Happy path = one call, no added latency.
+httpcode() {
+  local url="$1" code="" i=1
+  while :; do
+    code=$(curl -s -o /dev/null -m "$CURL_MAX" -w '%{http_code}' "$url")
+    [ "$code" = "200" ] && { printf '%s' "$code"; return 0; }
+    [ "$i" -ge "$HTTP_RETRIES" ] && { printf '%s' "$code"; return 0; }
+    i=$((i+1)); sleep "$RETRY_SLEEP"
+  done
+}
 
 [ -f "$INDEX" ] || { echo "FATAL: index.html not found at $INDEX"; exit 2; }
 
@@ -108,13 +126,22 @@ usable=0
 balfile=$(mktemp -t cicfa_bal)
 for url in "${rpcs[@]}"; do
   hdrs=$(mktemp -t cicfa_hdr)
-  body=$(curl -s -m "$CURL_MAX" -D "$hdrs" -X POST "$url" \
-    -H 'Content-Type: application/json' -H "Origin: $ORIGIN" \
-    --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"$wallet\",\"latest\"],\"id\":1}" 2>/dev/null)
-  bal=$(printf '%s' "$body" | python3 -c "import sys,json
+  bal=""; acao=""; attempt=1
+  # Retry an RPC only while it hasn't returned a 0x* balance, so a transient blip
+  # doesn't wrongly downgrade a healthy endpoint (or, if one hit all four at once,
+  # falsely report "NO usable RPC"). A healthy RPC answers on attempt 1.
+  while :; do
+    body=$(curl -s -m "$CURL_MAX" -D "$hdrs" -X POST "$url" \
+      -H 'Content-Type: application/json' -H "Origin: $ORIGIN" \
+      --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"$wallet\",\"latest\"],\"id\":1}" 2>/dev/null)
+    bal=$(printf '%s' "$body" | python3 -c "import sys,json
 try: print(json.load(sys.stdin).get('result') or 'NO_RESULT')
 except: print('PARSEFAIL')" 2>/dev/null)
-  acao=$(grep -i '^access-control-allow-origin:' "$hdrs" | tr -d '\r' | awk '{print $2}' | head -1)
+    acao=$(grep -i '^access-control-allow-origin:' "$hdrs" | tr -d '\r' | awk '{print $2}' | head -1)
+    case "$bal" in 0x*) break ;; esac
+    [ "$attempt" -ge "$HTTP_RETRIES" ] && break
+    attempt=$((attempt+1)); sleep "$RETRY_SLEEP"
+  done
   rm -f "$hdrs"
   cors_ok=false
   { [ "$acao" = "*" ] || [ "$acao" = "$ORIGIN" ]; } && cors_ok=true
