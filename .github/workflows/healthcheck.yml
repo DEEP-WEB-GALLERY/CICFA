@@ -1,19 +1,30 @@
 # Continuous live-site health monitor.
 #
-# Runs scripts/healthcheck.sh on a schedule so RPC/CORS drift — the site's most
-# fragile dependency, which has broken twice (DEE-14 dead cloudflare-eth,
-# DEE-23 rate-limited 1rpc.io) and was each time caught only reactively — is
-# detected within a day instead of whenever a human next happens to look.
+# Runs scripts/healthcheck.sh on a schedule so the site and its static
+# dependencies are checked without waiting for a human maintenance pass:
+#   - live site returns 200
+#   - inline JS still parses
+#   - QR CDN reachable
+#   - GitHub issue-form templates present in repo AND live (jury / submission intake)
+#   - every target="_blank" anchor carries rel="noopener"
 #
-# The script's exit code is safe to alert on: it retries transient blips
-# (curl 000 / 5xx / 429) before counting, and a single degraded RPC is a
-# non-fatal WARN. Exit 1 (red -> failed run -> GitHub notifies) fires only on a
-# genuine outage: live site not 200, ALL RPCs unusable, RPCs disagreeing on the
-# balance, broken inline JS, a missing issue template, or an unsafe _blank anchor.
+# SCOPE — RPC/CORS drift is deliberately NOT checked here (HEALTHCHECK_SKIP_RPC=1).
+# The site's bounty pool reads the balance from free public Ethereum RPCs, and
+# those endpoints block datacenter/cloud IPs: from a GitHub runner all four
+# return non-JSON challenge bodies, which the script would read as a total
+# outage (false FAIL) even though the site is fine for real browsers. A cloud-IP
+# curl is not a faithful *browser* drift signal anyway. RPC/CORS drift — the
+# failure class behind DEE-14 (dead cloudflare-eth) and DEE-23 (rate-limited
+# 1rpc.io) — is therefore verified by the LOCAL maintenance pass (residential
+# IP, env unset), which the Founding Engineer runs each heartbeat. This monitor
+# covers the cloud-IP-valid signals above; a red run is a genuine outage.
+#
+# The exit code is safe to alert on: transient blips (curl 000 / 5xx / 429) are
+# retried before they count, so only a real failure trips exit 1 -> failed run
+# -> GitHub notification.
 #
 # NOTE: GitHub disables scheduled workflows after 60 days of *repository*
-# inactivity. This repo gets periodic commits, but if runs stop appearing,
-# re-enable the workflow (Actions tab) or push any commit.
+# inactivity. If runs stop appearing, re-enable it (Actions tab) or push a commit.
 name: healthcheck
 
 on:
@@ -21,7 +32,7 @@ on:
     - cron: '17 6 * * *'   # 06:17 UTC daily (offset from :00, which GitHub delays)
   workflow_dispatch: {}     # allow manual "Run workflow" from the Actions tab
 
-# Never let two runs overlap (a slow RPC probe could still be in flight).
+# Never let two runs overlap.
 concurrency:
   group: healthcheck
   cancel-in-progress: false
@@ -33,16 +44,16 @@ jobs:
   healthcheck:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      HEALTHCHECK_SKIP_RPC: '1'   # cloud IP: skip the RPC probe (see header)
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0    # full history so the repo-state check resolves origin/main cleanly
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      # node + python3 + curl + git are all preinstalled on ubuntu-latest;
+      # the script only needs `node --check`, so no setup-node step is required.
 
       - name: Run health check
         shell: bash

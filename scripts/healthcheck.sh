@@ -23,7 +23,16 @@
 # before it counts, so a one-shot network blip (curl 000 / 5xx / 429) can never
 # flip a healthy site to a red FAIL — the exit code is safe for a scheduled monitor.
 #
-# Usage:  scripts/healthcheck.sh
+# HEALTHCHECK_SKIP_RPC=1 skips the section-4 RPC live-probe. Set it when running
+# from a datacenter/cloud IP (e.g. a CI runner): the free public RPC endpoints
+# block cloud egress, returning non-JSON challenge bodies that read as a total
+# outage even though the site is fine — a false positive, and a cloud-IP curl is
+# not a faithful *browser* drift signal anyway. RPC/CORS drift is therefore
+# verified only by the local maintenance pass (residential IP), which leaves
+# this env unset. The scheduled GitHub Action sets it (see .github/workflows).
+#
+# Usage:  scripts/healthcheck.sh              # full pass (local / residential IP)
+#         HEALTHCHECK_SKIP_RPC=1 scripts/healthcheck.sh   # skip RPC probe (CI)
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 
@@ -41,6 +50,7 @@ fail=0
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
 warn() { printf '  \033[33mWARN\033[0m  %s\n' "$1"; }
 red()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; fail=1; }
+skip() { printf '  \033[36mSKIP\033[0m  %s\n' "$1"; }   # intentional, non-fatal, not counted
 sec()  { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
 
 # GET a URL and echo its HTTP status. Returns the instant it sees 200; on any
@@ -122,6 +132,13 @@ while IFS= read -r line; do
 done <<< "$rpc_list"
 echo "  ${#rpcs[@]} RPC endpoint(s) configured"
 
+if [ -n "${HEALTHCHECK_SKIP_RPC:-}" ]; then
+  skip "RPC live-probe skipped (HEALTHCHECK_SKIP_RPC set — datacenter/cloud IP)"
+  echo "        Free public RPCs block cloud egress: all endpoints return non-JSON"
+  echo "        challenge bodies, indistinguishable from a real outage (false FAIL),"
+  echo "        and a cloud-IP curl is not a faithful browser-drift signal. RPC/CORS"
+  echo "        drift is verified by the local maintenance pass (residential IP)."
+else
 usable=0
 balfile=$(mktemp -t cicfa_bal)
 for url in "${rpcs[@]}"; do
@@ -162,6 +179,7 @@ distinct=$(sort -u "$balfile" | grep -c . || true)
 if [ "$distinct" -gt 1 ]; then red "RPCs DISAGREE on balance: $(sort -u "$balfile" | tr '\n' ' ')"
 elif [ "$distinct" -eq 1 ]; then pass "all usable RPCs agree: $(cat "$balfile" | head -1)"; fi
 rm -f "$balfile"
+fi
 
 # ── 5. QR CDN ────────────────────────────────────────────────────────────────
 sec "5. external CDN"
