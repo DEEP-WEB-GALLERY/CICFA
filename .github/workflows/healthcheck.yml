@@ -1,0 +1,59 @@
+# Continuous live-site health monitor.
+#
+# Runs scripts/healthcheck.sh on a schedule so RPC/CORS drift — the site's most
+# fragile dependency, which has broken twice (DEE-14 dead cloudflare-eth,
+# DEE-23 rate-limited 1rpc.io) and was each time caught only reactively — is
+# detected within a day instead of whenever a human next happens to look.
+#
+# The script's exit code is safe to alert on: it retries transient blips
+# (curl 000 / 5xx / 429) before counting, and a single degraded RPC is a
+# non-fatal WARN. Exit 1 (red -> failed run -> GitHub notifies) fires only on a
+# genuine outage: live site not 200, ALL RPCs unusable, RPCs disagreeing on the
+# balance, broken inline JS, a missing issue template, or an unsafe _blank anchor.
+#
+# NOTE: GitHub disables scheduled workflows after 60 days of *repository*
+# inactivity. This repo gets periodic commits, but if runs stop appearing,
+# re-enable the workflow (Actions tab) or push any commit.
+name: healthcheck
+
+on:
+  schedule:
+    - cron: '17 6 * * *'   # 06:17 UTC daily (offset from :00, which GitHub delays)
+  workflow_dispatch: {}     # allow manual "Run workflow" from the Actions tab
+
+# Never let two runs overlap (a slow RPC probe could still be in flight).
+concurrency:
+  group: healthcheck
+  cancel-in-progress: false
+
+permissions:
+  contents: read            # script only reads the repo + makes outbound requests
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history so the repo-state check resolves origin/main cleanly
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run health check
+        shell: bash
+        run: |
+          set -o pipefail
+          bash scripts/healthcheck.sh 2>&1 | tee /tmp/hc.log
+          status=${PIPESTATUS[0]}
+          {
+            echo '### CICFA live-site health'
+            echo '```'
+            sed -E 's/\x1b\[[0-9;]*m//g' /tmp/hc.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
