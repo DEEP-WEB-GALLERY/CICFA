@@ -110,10 +110,12 @@ CDN, templates, anchors) and a red run is a genuine outage → failed-run notifi
 each heartbeat. Note: GitHub disables scheduled workflows after 60 days of repo
 inactivity; if runs stop appearing, re-enable on the Actions tab or push a commit.
 
-**`docs/health_ledger.md` — the audit trail.** Each local pass gets one terse row
-(date, verdict, HEAD, on-chain balance, drift). Read it before running a pass: it
-tells you what "normal" looked like yesterday, so a changed balance or a new WARN
-is legible as drift instead of noise.
+**Where passes are logged.** The audit trail for local passes lives *outside this
+repo*, in the operations workspace (`DWG_AI/agents/lead-curator/ops-maintenance-log.md`,
+one row per pass) — deliberately single-homed there, so don't start a second ledger
+under `docs/`. Read the existing rows before running a pass: they tell you what
+"normal" looked like yesterday, so a changed balance or a new WARN reads as drift
+rather than noise, and they show whether a pass is even owed today.
 
 ---
 
