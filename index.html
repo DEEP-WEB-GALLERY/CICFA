@@ -560,6 +560,12 @@
       padding: 1rem 0;
     }
 
+    /* "Nobody yet" can stay near-invisible; a statement about money that HAS
+       arrived has to be readable. Set by the balance poller (see below). */
+    .contributors-empty.received {
+      color: var(--dim);
+    }
+
     /* ── HUNTER SECTION ──────────────────────────────────────── */
     .hunt-block {
       border: 1px solid var(--border);
@@ -1489,6 +1495,7 @@ function closeBreach() {
   const fillEl = document.getElementById('pot-progress-fill');
   const goalEl = document.getElementById('pot-goal');
   const contEl = document.getElementById('pot-contributors');
+  const emptyEl = document.querySelector('#contributors-body .contributors-empty');
 
   // Count real contributor rows, excluding the "NO CONTRIBUTORS YET" placeholder
   // (its single colspan cell was being counted as one contributor).
@@ -1588,6 +1595,29 @@ function closeBreach() {
       contEl.textContent = cnt > 0
         ? `${cnt} CONTRIBUTOR${cnt !== 1 ? 'S' : ''}`
         : (bal > 0 ? 'CONTRIBUTIONS RECEIVED — SEE ETHERSCAN' : 'BE THE FIRST CONTRIBUTOR');
+
+      // The empty-state row below the summary is static markup, so it kept
+      // reading "NO CONTRIBUTORS YET — BE THE FIRST" two lines under a summary
+      // that already said "CONTRIBUTIONS RECEIVED" — the panel contradicting
+      // itself about whether the pot has ever been funded. Only the summary was
+      // taught about the balance; the table was not. Fix the row too: we still
+      // can't name senders (eth_getBalance doesn't carry them and we run no
+      // indexer), but we can stop denying money that is demonstrably on-chain,
+      // and hand the viewer the address so they can check it themselves.
+      if (emptyEl && cnt === 0) {
+        if (bal > 0) {
+          emptyEl.classList.add('received');
+          emptyEl.textContent = 'CONTRIBUTIONS RECEIVED — SENDERS NOT LISTED HERE · ';
+          const a = document.createElement('a');
+          a.href = `https://etherscan.io/address/${addr}`;
+          a.rel = 'noopener'; a.target = '_blank'; // one line on purpose: noopener must never drift from _blank
+          a.textContent = 'VERIFY ON ETHERSCAN';
+          emptyEl.appendChild(a);
+        } else {
+          emptyEl.classList.remove('received');
+          emptyEl.textContent = 'NO CONTRIBUTORS YET — BE THE FIRST';
+        }
+      }
     } else {
       valEl.textContent = '0.000';
       lastRendered = null; // recovered fetch should animate up from 0 again
