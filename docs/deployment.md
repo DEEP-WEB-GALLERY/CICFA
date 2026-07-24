@@ -98,7 +98,9 @@ scripts/healthcheck.sh          # full pass — the RPC/CORS probe only works fr
 ```
 
 **`.github/workflows/healthcheck.yml` — the scheduled monitor (cloud IP).**
-Runs the same script daily at 06:17 UTC (and on-demand via *Run workflow*) with
+Runs the same script daily on a 06:17 UTC cron (GitHub queues scheduled jobs when
+runners free up — observed start is consistently ~08:40 UTC, so a run "missing" at
+06:20 is normal, not a failure) and on-demand via *Run workflow*, with
 `HEALTHCHECK_SKIP_RPC=1`. The RPC probe is deliberately skipped in CI: free public
 RPCs block datacenter egress, so from a runner all four return non-JSON challenge bodies
 that read as a total outage — a false FAIL, and a cloud-IP curl isn't a faithful *browser*
@@ -107,6 +109,11 @@ CDN, templates, anchors) and a red run is a genuine outage → failed-run notifi
 **RPC/CORS drift is only caught by the local pass** — run `healthcheck.sh` (env unset)
 each heartbeat. Note: GitHub disables scheduled workflows after 60 days of repo
 inactivity; if runs stop appearing, re-enable on the Actions tab or push a commit.
+
+**`docs/health_ledger.md` — the audit trail.** Each local pass gets one terse row
+(date, verdict, HEAD, on-chain balance, drift). Read it before running a pass: it
+tells you what "normal" looked like yesterday, so a changed balance or a new WARN
+is legible as drift instead of noise.
 
 ---
 
