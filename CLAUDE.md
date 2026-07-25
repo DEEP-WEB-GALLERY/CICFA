@@ -125,14 +125,54 @@ edit Jinja2 templates in `DWG_AUTORUN_BETA/tools/templates/` → run
 `python3 tools/generate_bounty_site.py` → review `.tmp/bounty_site/index.html` →
 run `python3 tools/deploy_to_gh_pages.py` to push the result here.
 
+> ### ⛔ STOP — this path is currently unsafe. Do not regenerate `index.html`.
+>
+> `DWG_AUTORUN_BETA/tools/templates/bounty_site.html` is the March 2026 original.
+> The live page has moved seven shipped fixes past it, and **the template has none
+> of them**. Regenerating from it today would:
+>
+> 1. **Re-publish the funding invitation** — "You are invited to arm the program",
+>    click-to-copy, and a QR encoding an `ethereum:` payment URI, all pointing at a
+>    wallet whose private key is in a thief's hands (**DEE-30**; swept 2026-07-10).
+>    That is the exact harm the mitigation removed. Anyone who accepted the
+>    invitation would lose the money.
+> 2. **Restore `cloudflare-eth.com` as the only RPC** (`rpc_url`, single, no
+>    fallback list) — retired, returns `-32603`, so the pot display would break
+>    permanently. That was DEE-14.
+> 3. Drop DEE-15 (adaptive decimals), DEE-19 (8s `AbortController` fetch timeout),
+>    DEE-22 (clipboard fallback), DEE-23 (RPC chain), DEE-28 (contributor-row
+>    truthfulness) and the DEE-30 mitigation itself.
+>
+> The template is not a source of truth for this page any more; `index.html` here
+> is. Use **direct edits** above. Before this path can be reopened, the template
+> has to be forward-ported and the funding invitation removed from it — and the
+> pot question settled on DEE-30. `scripts/healthcheck.sh` §8 fails if the
+> invitation ever reappears in the repo or on the live page, so an accidental
+> regeneration gets caught, but it gets caught *after* publication. Don't rely on it.
+
 **Operations** (launching, intake, jury, disclosure):
 open the relevant file in `workflows/`. Each is a numbered runbook.
 
 ---
 
-## 6. Bounty wallet (do not change without explicit instruction)
+## 6. Bounty wallet — ⚠ COMPROMISED, funding suspended
 
 `0x7fC76C439c200151Dde0345B09BA02764B9143Ec` — referenced in `index.html`.
+
+**The private key to this address is in someone else's hands.** On 2026-07-10 the
+only contribution the pot ever received was swept out of it (nonce 0 — the first
+and only send from the wallet was the theft), to a collection address that drained
+77 wallets in twelve days. Verified on three independent sources. The key did not
+leak from this repo: full-history `git log --all -p` matches no key, mnemonic or
+64-hex string. Evidence and current status: **DEE-30**.
+
+- **Never invite anyone to fund this address**, and don't re-add a copy button,
+  QR code or payment URI for it. The address stays published so the record can be
+  checked — labelled compromised, not fundable.
+- **This is not the permanent pot address.** Rotation needs a key the gallery
+  holds, so it is a board decision pending on DEE-30, not an edit. The old
+  "do not change the bounty wallet without explicit instruction" rule below now
+  means *don't quietly substitute one*, not *keep using this one forever*.
 
 ---
 
@@ -162,7 +202,10 @@ No actual exploit code. No real hacking tooling. The OS simulates, stages, and c
 - Sanitize copy or onboarding into reassurance.
 - Produce real exploit code or operational hacking tooling.
 - Duplicate generators from `DWG_AUTORUN_BETA/tools/` into this repo.
-- Change the bounty wallet address without explicit instruction.
+- Change the bounty wallet address without explicit instruction — and equally, don't
+  present the current one as safe to fund. It is compromised (§6, DEE-30).
+- Regenerate `index.html` from the AUTORUN template (§5 ⛔) — it would re-publish the
+  funding invitation and revert seven fixes.
 
 ---
 

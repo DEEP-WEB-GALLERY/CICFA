@@ -23,7 +23,7 @@ tools: [generate_open_call.py, generate_social_posts.py, generate_email_blast.py
 | Bounty site (`index.html`) | ✅ Live at `https://deep-web-gallery.github.io/CICFA/` |
 | Submission template | ✅ `.github/ISSUE_TEMPLATE/submission.yml` |
 | Jury registration template | ✅ `.github/ISSUE_TEMPLATE/jury_registration.yml` |
-| Bounty wallet | ✅ `0x7fC76C439c200151Dde0345B09BA02764B9143Ec` |
+| Bounty wallet | ⚠ `0x7fC76C439c200151Dde0345B09BA02764B9143Ec` — **COMPROMISED, key held by a third party, swept 2026-07-10. Funding suspended; rotation pending on DEE-30.** |
 | Open call HTML generator | ✅ `DWG_AUTORUN_BETA/tools/generate_open_call.py` |
 | Social posts generator | ✅ `DWG_AUTORUN_BETA/tools/generate_social_posts.py` |
 | Email blast generator | ✅ `DWG_AUTORUN_BETA/tools/generate_email_blast.py` |
@@ -94,7 +94,14 @@ Update CONFIG blocks in each script with the values locked in STEP 0. Exact fiel
 - [ ] `subject` — confirm copy
 
 ### `DWG_AUTORUN_BETA/tools/generate_bounty_site.py` (if regenerating the main page)
-- [ ] `wallet_address` — must remain `0x7fC76C439c200151Dde0345B09BA02764B9143Ec`
+
+> ⛔ **Do not regenerate the main page.** See `CLAUDE.md` §5. The template predates
+> seven shipped fixes and would re-publish an invitation to fund a compromised
+> wallet (DEE-30). The checklist below is frozen until the template is forward-ported.
+
+- [ ] `wallet_address` — was `0x7fC76C439c200151Dde0345B09BA02764B9143Ec`; that address is
+      **compromised** (DEE-30) and must not be presented as fundable. Do not substitute a
+      new one here either — rotation is a board decision, not a CONFIG edit.
 - [ ] `jury` — list of seated jurors (handle / role / wallet)
 - [ ] `deadline_iso` / `deadline_display` — from STEP 0
 - [ ] `submission_url` — from STEP 0

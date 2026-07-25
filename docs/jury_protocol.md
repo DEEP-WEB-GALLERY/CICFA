@@ -46,7 +46,7 @@ The juror signs each line (or a hashed concatenation of their full ballot — im
 - One vote per juror per submission. Simple majority decides (3 of 5).
 - **No abstentions.** A juror who fails to vote on a submission is treated as `reject` for tie-breaking purposes.
 - A juror may publish a brief reasoning (one paragraph) attached to their signed ballot. Optional, not required.
-- If multiple submissions are approved, the jury also signs a **ranking** in a second pass — the top-ranked receives the ETH pool, the rest receive credit + archive inclusion.
+- If multiple submissions are approved, the jury also signs a **ranking** in a second pass — the top-ranked receives the ETH pool, the rest receive credit + archive inclusion. (⚠ 2026-07-24: the pool cannot currently be paid — the wallet's key is compromised and it was swept on 2026-07-10. See `docs/submission_flow.md` Stage 5 and DEE-30. Ranking still stands; the transfer does not.)
 
 ### Verification
 

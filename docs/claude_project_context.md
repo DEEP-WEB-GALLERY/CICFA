@@ -75,8 +75,14 @@ intake via GitHub Issues using the templates above. Two registers:
   Register A = symbolic / conceptual finding (curatorial, ethical, semiotic)
   Register B = technical white-hat finding (responsible disclosure path)
 
-## Bounty wallet (do not change without explicit instruction)
+## Bounty wallet — COMPROMISED, funding suspended (DEE-30)
 0x7fC76C439c200151Dde0345B09BA02764B9143Ec
+  The private key is held by a third party. The pot's single contribution was
+  swept out on 2026-07-10 (nonce 0 — the wallet's first and only send was the
+  theft). The live page states this and no longer invites contributions; the
+  address stays published so the record can be checked, not funded.
+  Do not present it as fundable. Do not substitute a replacement on your own
+  authority — rotation needs a key the gallery holds and is a board decision.
 
 ## Aesthetic (non-negotiable, inherited from DWG SOUL)
 - Near-black backgrounds. Monospace. Terminal voice.

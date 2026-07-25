@@ -43,12 +43,30 @@ Run the first CICFA bounty operation. Invite participants to identify and disclo
 
 ## Publishing Checklist
 
+> ### ⛔ FROZEN — do not run this checklist as written (2026-07-24, DEE-30)
+>
+> The bounty pool's private key is held by a third party and the wallet was swept on
+> 2026-07-10. Two consequences for everything below:
+>
+> - **Do not regenerate or re-deploy the bounty site.** The AUTORUN template is the
+>   March original — it re-publishes the funding invitation and QR for the compromised
+>   address and reverts DEE-14/15/19/22/23/28/30. See `CLAUDE.md` §5.
+> - **Do not re-publish the open call, social posts or email blast.** They carry the
+>   reward promise to fresh audiences while the pot cannot pay it. Whether the promise
+>   changes is a curatorial decision the board holds on DEE-30 — so it is left standing,
+>   not silently rewritten, and not re-broadcast in the meantime either.
+>
+> Reopening this checklist requires the DEE-30 pot decision plus a forward-ported template.
+
 ### Phase 1 — Generate Assets
 - [ ] Set `wallet_address` (and optionally `wallet_ens`) in `tools/generate_bounty_site.py` CONFIG
+      — ⛔ frozen: the current address is compromised and rotation is a board decision (DEE-30)
 - [ ] Add jury member handles to `CONFIG["jury"]` in `tools/generate_bounty_site.py`
 - [ ] Confirm `submission_url` (Google Form or email alias) and `deadline_iso` before running
 - [ ] Run `python tools/generate_bounty_site.py` → `.tmp/bounty_site/index.html`
-- [ ] Preview in browser — verify: boot sequence, BREACH modal, live pot display, both CTA buttons, QR code, countdown timer
+- [ ] Preview in browser — verify: boot sequence, BREACH modal, live pot display, both CTA buttons, countdown timer
+      — the **QR code was removed** 2026-07-24: it encoded an `ethereum:` payment URI for the
+      compromised pot address (DEE-30). Its presence in a preview is now a defect, not a check.
 - [ ] Run `python tools/generate_open_call.py` → `.tmp/open_call.html` (secondary asset)
 - [ ] Run `python tools/generate_social_posts.py` → `.tmp/social_posts.md`
 - [ ] Run `python tools/generate_email_blast.py` → `.tmp/email_blast.md`

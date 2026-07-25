@@ -10,12 +10,12 @@ These are the canonical tools for producing CICFA assets. Do **not** duplicate t
 
 | Generator | What it produces | When to run |
 |---|---|---|
-| `generate_bounty_site.py` | The full red-accent `index.html` (live site) | When structure changes (new section, new component). Direct copy tweaks should edit `index.html` here instead. |
+| `generate_bounty_site.py` | The full red-accent `index.html` (live site) | ⛔ **Do not run — see `CLAUDE.md` §5.** The template is the March original: it would re-publish the funding invitation for a wallet whose key is compromised (DEE-30) and revert seven fixes (DEE-14/15/19/22/23/28/30). Edit `index.html` here directly. |
 | `generate_open_call.py` | `.tmp/open_call.html` — secondary deploy asset | Pre-launch (`workflows/03c_*` STEP 2) |
 | `generate_social_posts.py` | `.tmp/social_posts.md` — Twitter / IG / Mastodon copy | Pre-launch (`workflows/03c_*` STEP 2) |
 | `generate_email_blast.py` | `.tmp/email_blast.md` — email campaign copy | Pre-launch (`workflows/03c_*` STEP 2) |
 | `generate_ransom_letter.py` | `.tmp/ransom_letter.html` — Register B disclosure artifact | When a Register B submission is approved (`docs/submission_flow.md` Stage 5B) |
-| `deploy_to_gh_pages.py` | Pushes `.tmp/bounty_site/index.html` to this repo's `main` | After regenerating + reviewing. Set `dry_run = False` before running. |
+| `deploy_to_gh_pages.py` | Pushes `.tmp/bounty_site/index.html` to this repo's `main` | ⛔ **Do not run.** Its source artifact `.tmp/bounty_site/index.html` is a March render that still carries the funding invitation and QR (DEE-30). The script now refuses while funding is suspended; don't clear the interlock to get past it. Commit + push from `CICFA_PUBLIC` instead. |
 
 ### Invocation pattern
 

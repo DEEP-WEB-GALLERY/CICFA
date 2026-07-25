@@ -103,6 +103,12 @@ For an approved Register A submission:
 
 1. Operations notifies the submitter publicly (issue thread + tag).
 2. Operations confirms ETH transfer with `@MarketDepravation`. Transfer executes from the bounty wallet to the submitter's wallet. Tx hash published in the issue.
+
+   > ⚠ **Not executable as written (2026-07-24, DEE-30).** The bounty wallet's key is
+   > held by a third party and the pot was swept on 2026-07-10; it holds gas dust. No
+   > payout can be made from that address, and no operator should attempt one. If a
+   > submission is approved before the board settles the pot question, say so plainly
+   > to the submitter rather than scheduling a transfer that cannot happen.
 3. Archive entry created in `archive/operation_001/` — submission + verdict + jury signatures + tx hash.
 4. Live site (`index.html`) updated to show the winner.
 5. Issue closed with label `approved`, `archived`.

@@ -8,10 +8,12 @@
 #   2. repo is clean and in sync with origin/main
 #   3. index.html present; inline <script> blocks pass `node --check`
 #   4. every configured RPC returns the bounty-pool balance AND is CORS-usable
-#      from the live origin; all usable RPCs agree on the balance
-#   5. QR CDN reachable
+#      from the live origin; all usable RPCs agree on the balance; and nobody has
+#      sent new funds to the compromised pot address (DEE-30 inbound guard)
+#   5. QR CDN reachable — only if the page still loads an external script
 #   6. GitHub issue-form templates present in repo and live
 #   7. every target="_blank" anchor carries rel="noopener"
+#   8. funding suspension holds: no solicitation, disclosure intact (DEE-30)
 #
 # Config (wallet + RPC list) is parsed straight out of index.html, so this
 # script can never drift from what the page actually ships. No jq required.
@@ -42,6 +44,10 @@ LIVE_URL="https://deep-web-gallery.github.io/CICFA/"
 ORIGIN="https://deep-web-gallery.github.io"
 RAW_BASE="https://raw.githubusercontent.com/DEEP-WEB-GALLERY/CICFA/main"
 QR_CDN="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
+# The gas dust the 2026-07-10 sweep left behind (0.0000210 ETH). The pot's key is
+# in someone else's hands, so this is not a floor to grow from — it is a ceiling.
+# Any balance ABOVE it means somebody funded a wallet that will be emptied.
+POT_SWEPT_WEI=21000000000000
 CURL_MAX=12
 HTTP_RETRIES=3      # transient blips (curl 000 / 5xx / 429) get retried this many times
 RETRY_SLEEP=2       # seconds between retries — a one-shot blip must not read as an outage
@@ -183,7 +189,27 @@ if [ "$usable" -eq 0 ]; then red "NO usable RPC — live pot would break"
 else pass "$usable/${#rpcs[@]} RPC(s) browser-usable"; fi
 distinct=$(sort -u "$balfile" | grep -c . || true)
 if [ "$distinct" -gt 1 ]; then red "RPCs DISAGREE on balance: $(sort -u "$balfile" | tr '\n' ' ')"
-elif [ "$distinct" -eq 1 ]; then pass "all usable RPCs agree: $(cat "$balfile" | head -1)"; fi
+elif [ "$distinct" -eq 1 ]; then
+  agreed=$(sort -u "$balfile" | head -1)
+  pass "all usable RPCs agree: $agreed"
+  # Unexpected-inbound guard (DEE-30). Every other check here asks "is the page
+  # working?". This one asks "has anyone been hurt?" — the address stays published
+  # so the record can be checked, which means a visitor can still pay the thief by
+  # hand. If that happens we have hours, not weeks, to notice: the sweeper emptied
+  # five of its other victims within minutes of gas-funding them.
+  wei=$(python3 -c "print(int('$agreed',16))" 2>/dev/null || echo "")
+  if [ -z "$wei" ]; then warn "could not decode balance $agreed — inbound guard not evaluated"
+  elif [ "$wei" -gt "$POT_SWEPT_WEI" ]; then
+    red "POT HAS BEEN FUNDED: $wei wei > post-sweep baseline $POT_SWEPT_WEI."
+    printf '        Someone sent ETH to a wallet whose key is compromised (DEE-30).\n'
+    printf '        It will be swept. Pull the tx list, identify the sender, escalate now:\n'
+    printf '        https://eth.blockscout.com/api?module=account&action=txlist&address=%s\n' "$wallet"
+  elif [ "$wei" -lt "$POT_SWEPT_WEI" ]; then
+    warn "balance $wei wei is BELOW the post-sweep baseline $POT_SWEPT_WEI — the leftover dust moved too (nothing of ours at risk, but the sweeper is still working this address)"
+  else
+    pass "no inbound since the sweep (balance still exactly the $POT_SWEPT_WEI wei gas dust)"
+  fi
+fi
 rm -f "$balfile"
 fi
 
@@ -216,6 +242,92 @@ total=$(grep -c '_blank' "$INDEX" || true)
 missing=$(grep -n '_blank' "$INDEX" | grep -vi 'noopener' || true)
 if [ -z "$missing" ]; then pass "all $total target=_blank anchor(s) carry rel=noopener"
 else red "target=_blank without noopener:"; printf '        %s\n' "$missing"; fi
+
+# ── 8. funding-suspension invariant ──────────────────────────────────────────
+# DEE-30. The pot's private key is in someone else's hands and the wallet was
+# swept on 2026-07-10, so the page must never again invite anyone to send ETH to
+# it. This is the regression detector for that mitigation, and it is deliberately
+# two-sided: the solicitation must stay ABSENT *and* the disclosure must stay
+# PRESENT. Silently dropping the warning is the same failure as re-adding the ask.
+#
+# It exists because the mitigation is a regeneration away from being undone.
+# DWG_AUTORUN_BETA/tools/templates/bounty_site.html — which CLAUDE.md §5 documents
+# as the sanctioned way to make structural changes to this page — is the March
+# original: it still carries "You are invited to arm the program", the
+# click-to-copy affordance and the `ethereum:` payment QR, and it predates every
+# fix from DEE-14 through DEE-30. Nothing in this repo would have noticed the
+# invitation coming back. Now something does, within a day, in CI.
+#
+# All plain string tests against shipped HTML, so this runs from any IP: unlike
+# the section-4 RPC probe, CI *does* cover this check.
+sec "8. funding-suspension invariant (DEE-30)"
+
+# Each pattern is the narrowest form that only the affordance can match. The
+# loose forms are unusable: `ethereum:`, `copyAddress` and `qrcodejs` all still
+# appear on the page inside the comments explaining their own removal, so
+# grepping for those would false-FAIL forever.
+solicit_patterns="invited to arm
+increases the prize
+To fund the bounty
+onclick=\"copyAddress()\"
+new QRCode
+ethereum:' +"
+
+disclose_patterns="Funding suspended
+Do not send ETH to this address"
+
+solicit_hits() {   # echo every solicitation pattern present in file $1
+  local f="$1" p
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    grep -Fq "$p" "$f" && echo "$p"
+  done <<EOF
+$solicit_patterns
+EOF
+  return 0
+}
+
+show() { echo "$1" | while IFS= read -r h; do [ -n "$h" ] && echo "        - $h"; done; }
+
+# repo copy — deterministic, no network, so a bad commit is caught before deploy
+hits=$(solicit_hits "$INDEX")
+if [ -z "$hits" ]; then pass "repo index.html: no funding solicitation"
+else red "repo index.html: FUNDING SOLICITATION IS BACK — the pot key is compromised (DEE-30):"; show "$hits"; fi
+
+missing_disc=""
+while IFS= read -r p; do
+  [ -n "$p" ] || continue
+  grep -Fq "$p" "$INDEX" || missing_disc="$missing_disc$p
+"
+done <<EOF
+$disclose_patterns
+EOF
+if [ -z "$missing_disc" ]; then pass "repo index.html: compromise disclosure present"
+else red "repo index.html: compromise disclosure MISSING — page no longer warns visitors:"; show "$missing_disc"; fi
+
+# live copy — this is the surface a visitor's money actually leaves from. A fetch
+# failure is a WARN (can't verify), never a FAIL: section 1 already owns liveness.
+livefile=$(mktemp -t cicfa_live)
+lattempt=1
+while :; do
+  lcode=$(curl -s -m "$CURL_MAX" -o "$livefile" -w '%{http_code}' "$LIVE_URL" 2>/dev/null)
+  [ "$lcode" = "200" ] && break
+  [ "$lattempt" -ge "$HTTP_RETRIES" ] && break
+  lattempt=$((lattempt+1)); sleep "$RETRY_SLEEP"
+done
+if [ "$lcode" = "200" ]; then
+  lhits=$(solicit_hits "$livefile")
+  if [ -z "$lhits" ]; then pass "live page: no funding solicitation"
+  else red "live page: FUNDING SOLICITATION IS LIVE — visitors are being asked to fund a swept wallet:"; show "$lhits"; fi
+  if grep -Fq "Funding suspended" "$livefile"; then pass "live page: compromise disclosure present"
+  else red "live page: compromise disclosure MISSING"; fi
+  lext=$(grep -c '<script[^>]*src=' "$livefile" || true)
+  if [ "$lext" -eq 0 ]; then pass "live page: ships zero external scripts (QR CDN stays gone)"
+  else warn "live page: $lext external script(s) — the QR CDN was removed with the payment QR; verify what came back"; fi
+else
+  warn "live page fetch -> $lcode — funding-suspension invariant not verified against production"
+fi
+rm -f "$livefile"
 
 # ── verdict ──────────────────────────────────────────────────────────────────
 sec "verdict"

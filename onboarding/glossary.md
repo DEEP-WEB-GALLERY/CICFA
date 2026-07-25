@@ -89,9 +89,18 @@ Operative principle: the long-term value of CICFA is the archive of disclosures 
 
 ETH held in the bounty wallet (`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`). Funded by contributors. Transferred to the winning submitter's wallet on jury approval. Live balance is displayed on `index.html` via JSON-RPC `eth_getBalance`.
 
+> ⚠ **Current state (2026-07-24): the pot is empty and funding is suspended.** The
+> wallet's private key is held by a third party. The only contribution the pot ever
+> received — Ξ0.000662, sent 2026-03-19 — was swept out on 2026-07-10, along with 76
+> other wallets drained by the same address. What remains is Ξ0.000021 of gas dust.
+> The description above is the program as designed; it is not what the pot can do
+> today. Nothing can be paid out of this address, and nothing should be sent to it.
+> Tracked as DEE-30; whether the pot is rotated, left suspended or retired is an open
+> board decision.
+
 ## Bounty wallet
 
-`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`. Don't change without explicit instruction.
+`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`. Don't change without explicit instruction — and note it is **compromised** (see above): don't present it as fundable either. Rotation requires a key the gallery holds, which makes it a board decision rather than a config change.
 
 ---
 
