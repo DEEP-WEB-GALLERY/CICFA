@@ -87,8 +87,9 @@ Two layers, by design — one catches browser-only failures, the other runs unat
 Reproduces the manual checklist that has caught every past regression (DEE-14 dead
 `cloudflare-eth`, DEE-23 rate-limited `1rpc.io`): live site 200, repo in sync, inline
 JS parses, **every configured RPC returns the balance AND is CORS-usable from the live
-origin and they all agree**, QR CDN reachable, issue templates present in repo + live,
-every `target="_blank"` carries `rel="noopener"`. Config is parsed straight out of
+origin and they all agree**, external scripts reachable (SKIPped while the page ships
+none — it dropped the QR CDN with the payment QR), issue templates present in repo +
+live, every `target="_blank"` carries `rel="noopener"`. Config is parsed straight out of
 `index.html`, so the check can't drift from what the page ships. Exit 0 = all green,
 1 = a hard check failed. Transient blips (curl 000 / 5xx / 429) are retried before they
 count, so a one-shot network hiccup can't false-FAIL. Run it each maintenance pass:
@@ -96,6 +97,22 @@ count, so a one-shot network hiccup can't false-FAIL. Run it each maintenance pa
 ```bash
 scripts/healthcheck.sh          # full pass — the RPC/CORS probe only works from a residential IP
 ```
+
+**Sections 8 and 9 are the DEE-30 regression detectors — read them before touching the
+funding copy or the generator.** The bounty pool's private key is compromised and the
+wallet was swept 2026-07-10, so the page must never invite anyone to send ETH to it
+again. §8 is two-sided against `index.html` *and* the live page: the solicitation must
+stay absent **and** the disclosure must stay present (silently dropping the warning is
+the same failure as re-adding the ask). §9 checks one layer upstream — that the
+interlocks stopping the page from being *regenerated* into a solicitation are still
+armed: `DWG_AUTORUN_BETA`'s `generate_bounty_site.py` refuses on its `FUNDING_SUSPENDED`
+flag while its March template still solicits, and `deploy_to_gh_pages.py` refuses on the
+artifact's **content** (so a genuinely fixed artifact still ships). §9 also asserts the
+deploy gate still covers every marker §8 tests for, so the two can't drift apart. §8 uses
+plain string tests, so **CI covers it**; §9 needs the AUTORUN pack checked out and cleanly
+SKIPs where it isn't (override the path with `HEALTHCHECK_AUTORUN_ROOT`). Neither section
+ever *executes* the generator or deploy script: if an interlock had been removed, running
+the deploy to find out would publish the invitation.
 
 **`.github/workflows/healthcheck.yml` — the scheduled monitor (cloud IP).**
 Runs the same script daily on a 06:17 UTC cron (GitHub queues scheduled jobs when

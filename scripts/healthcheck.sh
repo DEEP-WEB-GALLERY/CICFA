@@ -14,6 +14,8 @@
 #   6. GitHub issue-form templates present in repo and live
 #   7. every target="_blank" anchor carries rel="noopener"
 #   8. funding suspension holds: no solicitation, disclosure intact (DEE-30)
+#   9. the regeneration interlocks that stop the invitation being re-published
+#      are still armed — local pass only, the AUTORUN pack is a separate repo
 #
 # Config (wallet + RPC list) is parsed straight out of index.html, so this
 # script can never drift from what the page actually ships. No jq required.
@@ -32,6 +34,10 @@
 # not a faithful *browser* drift signal anyway. RPC/CORS drift is therefore
 # verified only by the local maintenance pass (residential IP), which leaves
 # this env unset. The scheduled GitHub Action sets it (see .github/workflows).
+#
+# HEALTHCHECK_AUTORUN_ROOT overrides where section 9 looks for the DWG_AUTORUN_BETA
+# pack (default: two levels above this repo). That pack is not checked out on a CI
+# runner or on anyone else's machine, so an absent path is a clean SKIP.
 #
 # Usage:  scripts/healthcheck.sh              # full pass (local / residential IP)
 #         HEALTHCHECK_SKIP_RPC=1 scripts/healthcheck.sh   # skip RPC probe (CI)
@@ -328,6 +334,90 @@ else
   warn "live page fetch -> $lcode — funding-suspension invariant not verified against production"
 fi
 rm -f "$livefile"
+
+# ── 9. regeneration interlocks ───────────────────────────────────────────────
+# DEE-30, one level upstream of section 8. Section 8 notices the invitation once
+# it is already back — in a commit, or worse, live in production for up to a day
+# until the next scheduled run. The interlocks are the layer that stops it being
+# published at all: commit b67ae52 made DWG_AUTORUN_BETA's generator and deploy
+# scripts refuse to run while the pot is compromised. Nothing verified that they
+# stay armed, which is exactly the gap section 8 exists to close, one layer up —
+# a mitigation nobody monitors is a mitigation that quietly stops being true.
+#
+# SAFETY: this never *executes* either script. If an interlock had been removed,
+# running the deploy script to find out what it does would publish the
+# invitation. Static text tests only, and no writes anywhere in the pack.
+sec "9. regeneration interlocks (DEE-30)"
+AUTORUN_ROOT="${HEALTHCHECK_AUTORUN_ROOT:-$REPO_ROOT/../../DWG_AUTORUN_BETA}"
+GEN="$AUTORUN_ROOT/tools/generate_bounty_site.py"
+DEPLOY="$AUTORUN_ROOT/tools/deploy_to_gh_pages.py"
+TPL="$AUTORUN_ROOT/tools/templates/bounty_site.html"
+ARTIFACT="$AUTORUN_ROOT/.tmp/bounty_site/index.html"
+
+if [ ! -d "$AUTORUN_ROOT" ]; then
+  skip "DWG_AUTORUN_BETA not checked out here — interlocks are covered by the local pass"
+else
+  # The generator's flag is only load-bearing while the template it renders still
+  # solicits. If someone genuinely fixes that March template, FUNDING_SUSPENDED =
+  # False becomes legitimate — so condition the requirement on the template's own
+  # content instead of demanding the flag forever. Same two-sided shape as 8.
+  tplhits=""
+  if [ -f "$TPL" ]; then
+    tplhits=$(solicit_hits "$TPL")
+  else
+    warn "template missing at $TPL — cannot tell whether the generator flag is load-bearing"
+  fi
+
+  if [ ! -f "$GEN" ]; then
+    warn "generator not found at $GEN — pack may have been restructured"
+  elif [ -n "$tplhits" ]; then
+    if grep -Eq '^FUNDING_SUSPENDED[[:space:]]*=[[:space:]]*True' "$GEN" &&
+       grep -Eq 'if[[:space:]]+FUNDING_SUSPENDED[[:space:]]*:' "$GEN"; then
+      pass "generator refuses to run; its template still solicits ($(solicit_hits "$TPL" | grep -c .) marker(s))"
+    else
+      red "generator interlock GONE while its template still solicits — one command from re-publishing the invitation:"
+      show "$tplhits"
+    fi
+  else
+    pass "generator template carries no solicitation — interlock no longer load-bearing"
+  fi
+
+  # The deploy gate is unconditional: it inspects the *artifact* it is about to
+  # publish, so it guards a stale March render regardless of the template's state.
+  # It must also still cover every marker section 8 tests for — otherwise the two
+  # detectors drift apart and the gap between them is what ships.
+  if [ ! -f "$DEPLOY" ]; then
+    warn "deploy script not found at $DEPLOY — pack may have been restructured"
+  else
+    gate_missing=""
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      grep -Fq "$p" "$DEPLOY" || gate_missing="$gate_missing$p
+"
+    done <<EOF
+$solicit_patterns
+EOF
+    if ! grep -Fq 'This artifact solicits contributions to a compromised wallet' "$DEPLOY"; then
+      red "deploy content-gate GONE — a soliciting artifact could be published to the live site"
+    elif [ -n "$gate_missing" ]; then
+      red "deploy content-gate no longer covers every marker section 8 tests for:"; show "$gate_missing"
+    else
+      pass "deploy refuses any artifact whose content solicits (covers all section-8 markers)"
+    fi
+  fi
+
+  # The staged artifact is a March render sitting in the tree, loaded and pointed
+  # at the live site. WARN, not FAIL: the deploy gate above is what makes it inert,
+  # and if that gate ever goes missing this line is the evidence of what it held back.
+  if [ -f "$ARTIFACT" ]; then
+    arthits=$(solicit_hits "$ARTIFACT")
+    if [ -n "$arthits" ]; then
+      warn "staged artifact still solicits ($(echo "$arthits" | grep -c .) marker(s)) — inert only while the deploy gate holds; it is a March render, not a source of truth"
+    else
+      pass "staged artifact carries no solicitation"
+    fi
+  fi
+fi
 
 # ── verdict ──────────────────────────────────────────────────────────────────
 sec "verdict"
