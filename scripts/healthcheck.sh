@@ -111,8 +111,14 @@ fi
 
 # ── 4. RPC chain: balance + CORS + agreement ─────────────────────────────────
 sec "4. bounty-pool RPC chain"
-wallet=$(grep -oE '0x[a-fA-F0-9]{40}' "$INDEX" | head -1)
-[ -n "$wallet" ] && echo "  wallet: $wallet" || red "could not parse walletAddress from index.html"
+# Read the address out of the CICFA config line, not "the first 0x… in the file".
+# Those were the same string until the page had to publish a second, hostile
+# address (the wallet that swept the pot on 2026-07-10), which sits above the
+# config — at which point the loose grep silently pointed this whole section at
+# the drainer's balance and still reported ALL GREEN. A monitor must name what it
+# is watching.
+wallet=$(grep -oE 'walletAddress:[[:space:]]*"0x[a-fA-F0-9]{40}"' "$INDEX" | head -1 | grep -oE '0x[a-fA-F0-9]{40}')
+[ -n "$wallet" ] && echo "  wallet: $wallet (from CICFA.walletAddress)" || red "could not parse walletAddress from index.html"
 
 # Capture RPC URLs via command substitution (heredoc is safe inside $(...) on
 # bash 3.2) then iterate with a herestring — process substitution + heredoc is
@@ -181,10 +187,20 @@ elif [ "$distinct" -eq 1 ]; then pass "all usable RPCs agree: $(cat "$balfile" |
 rm -f "$balfile"
 fi
 
-# ── 5. QR CDN ────────────────────────────────────────────────────────────────
-sec "5. external CDN"
-code=$(httpcode "$QR_CDN")
-[ "$code" = "200" ] && pass "QR CDN -> $code" || red "QR CDN -> $code (expected 200)"
+# ── 5. external scripts ──────────────────────────────────────────────────────
+# Derived from index.html rather than asserted, like the wallet/RPC config above:
+# the page dropped its only remote script when funding was suspended (the QR
+# encoded a payment URI for the compromised pot address). A monitor that kept
+# checking a CDN the page no longer loads would report on nothing, and would go
+# red for an outage that could not affect us.
+sec "5. external scripts"
+ext=$(grep -c '<script[^>]*src=' "$INDEX" || true)
+if [ "$ext" -eq 0 ]; then
+  skip "page ships no external scripts — nothing to reach"
+else
+  code=$(httpcode "$QR_CDN")
+  [ "$code" = "200" ] && pass "QR CDN -> $code" || red "QR CDN -> $code (expected 200)"
+fi
 
 # ── 6. issue-form templates ──────────────────────────────────────────────────
 sec "6. issue-form templates"

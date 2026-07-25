@@ -4,10 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MOMA.SYM — CICFA Bounty Program</title>
-  <meta name="description" content="CICFA Operation 001: decentralized bug bounty targeting MoMA's institutional architecture. Fund the pot or take the challenge.">
+  <meta name="description" content="CICFA Operation 001: decentralized bug bounty targeting MoMA's institutional architecture. Funding suspended — the pot address is compromised. Take the challenge.">
   <meta name="author" content="@MarketDepravation">
-  <!-- QR Code library -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <style>
     /* ── TOKENS ──────────────────────────────────────────────── */
     :root {
@@ -373,6 +371,18 @@
       margin-top: 0.25rem;
     }
 
+    /* The pot number is still true — the wallet really holds this much. What
+       stops being true without this line is the implication that sending more
+       is a good idea. */
+    .pot-alert {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-top: 0.8rem;
+      line-height: 1.7;
+    }
+
     /* ── FORK CTA ────────────────────────────────────────────── */
     .fork-cta {
       display: grid;
@@ -445,6 +455,33 @@
       font-style: normal;
     }
 
+    /* Funding is suspended because the pot key is compromised (sweep of
+       2026-07-10, see the notice markup). This notice has to out-shout the
+       fund copy it sits inside, so it takes the warn palette, not the green
+       fund palette — a visitor must not be able to skim past it to the
+       address. */
+    .fund-alert {
+      border: 1px solid var(--accent);
+      background: var(--warn-bg);
+      padding: 1rem 1.1rem;
+      margin: 1.25rem 0;
+      font-size: 11px;
+      line-height: 1.9;
+      color: #ffb3b3;
+    }
+
+    .fund-alert-head {
+      color: var(--accent);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .fund-alert code {
+      color: var(--fg);
+      word-break: break-all;
+    }
+
     .wallet-block {
       border: 1px solid #1a3a2a;
       padding: 1.25rem;
@@ -501,27 +538,6 @@
     .wallet-btn:hover {
       background: var(--accent2);
       color: #000;
-    }
-
-    #qr-container {
-      margin-top: 1.25rem;
-      display: none;
-    }
-
-    #qr-container.visible { display: block; }
-
-    #qr-code {
-      display: inline-block;
-      padding: 0.75rem;
-      background: #fff;
-    }
-
-    .qr-label {
-      font-size: 9px;
-      color: var(--dim);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      margin-bottom: 0.4rem;
     }
 
     /* ── CONTRIBUTORS TABLE ──────────────────────────────────── */
@@ -1031,11 +1047,15 @@
       <div class="pot-progress-fill" id="pot-progress-fill"></div>
     </div>
     <div class="pot-goal" id="pot-goal"></div>
+    <div class="pot-alert">
+      ⚠ Funding suspended — pot key compromised, swept 2026-07-10.
+      Do not send ETH to this address.
+    </div>
   </div>
 
   <!-- FORK CTA — the psychological split -->
   <div class="fork-cta">
-    <a href="#fund" class="fork-btn fork-btn-fund">⊕ Fund the Bounty</a>
+    <a href="#fund" class="fork-btn fork-btn-fund">⊕ Funding Suspended — Why</a>
     <a href="#hunt" class="fork-btn fork-btn-hunt">⊗ Take the Challenge</a>
     <div class="fork-divider">choose your role</div>
   </div>
@@ -1046,38 +1066,41 @@
        FUNDER SECTION
   ══════════════════════════════════════════════════════════ -->
   <div id="fund">
-    <h2 class="section-label">⊕ Fund the Bounty</h2>
+    <h2 class="section-label">⊕ Funding — Suspended</h2>
 
     <div class="fund-block">
+      <div class="fund-alert">
+        <div class="fund-alert-head">⚠ Funding suspended — this address is compromised</div>
+        On <strong>2026-07-10 05:14:59 UTC</strong> the only contribution this pot has ever
+        received — Ξ0.000662267459797089, sent 2026-03-19 — was moved out of the wallet to
+        <code>0xc7925691E7963982d9F43403c04CAA95d4d06008</code> in a transaction the gallery
+        did not authorise
+        (<a href="https://etherscan.io/tx/0xcef2dcd173d4c697b28a3ab777106162c3d756312769c796ac3c8e7d8bc901ce" target="_blank" rel="noopener">tx</a>).
+        That address collected small amounts from 77 unrelated wallets inside twelve hours and
+        forwarded the total onward: an automated sweep. The pot's key is therefore in someone
+        else's hands, and <strong>anything sent to it will be taken.</strong><br><br>
+        <strong>Do not send ETH to the address below.</strong> It stays published so the record
+        can be checked, not funded. A new address will appear here once the pot is rotated —
+        and the program's premise is that you should verify that claim on-chain rather than
+        take our word for it.
+      </div>
+
       <p class="fund-intro">
-        You are invited to arm the program.<br>
-        Every contribution increases the prize. The pot is on-chain.
-        <em>Transparent. Verifiable. Permanent.</em><br><br>
-        To fund the bounty, send ETH to the address below.
-        Your contribution is attributed on the board.
-        The act of funding is itself a critical gesture —
+        The act of funding was itself meant to be a critical gesture —
         an assertion that institutional critique has <em>market value</em>.
+        What the pot has demonstrated instead is
+        <em>how quickly value put into a public address leaves it.</em>
+        That is a finding, not a fault in the metaphor. It stands as part of the record.
       </p>
 
       <div class="wallet-block">
-        
-        
-        <div class="wallet-label" style="margin-top:0.6rem;">Ethereum Address</div>
-        <div class="wallet-address" id="wallet-addr-display" onclick="copyAddress()" title="Click to copy">
+        <div class="wallet-label" style="margin-top:0.6rem;">Ethereum Address — compromised, do not fund</div>
+        <div class="wallet-address" id="wallet-addr-display">
           0x7fC76C439c200151Dde0345B09BA02764B9143Ec
         </div>
         <div class="wallet-actions">
-          <button class="wallet-btn" onclick="copyAddress()">[ Copy Address ]</button>
-          <button class="wallet-btn" onclick="toggleQR()">[ Show QR Code ]</button>
-          
           <a class="wallet-btn" href="https://etherscan.io/address/0x7fC76C439c200151Dde0345B09BA02764B9143Ec" target="_blank" rel="noopener">[ View on Etherscan ]</a>
-          
         </div>
-        <div id="qr-container">
-          <div class="qr-label" style="margin-top:0.75rem;">Scan to send ETH</div>
-          <div id="qr-code"></div>
-        </div>
-        
       </div>
 
       <!-- CONTRIBUTORS -->
@@ -1093,8 +1116,8 @@
           
           <tr>
             <td colspan="2">
-              <div class="contributors-empty">
-                NO CONTRIBUTORS YET — BE THE FIRST
+              <div class="contributors-empty received">
+                ONE CONTRIBUTION RECEIVED 2026-03-19 · SWEPT OUT 2026-07-10
               </div>
             </td>
           </tr>
@@ -1327,8 +1350,8 @@ const CICFA = {
   targetAmountEth: 1.0,
   deadlineIso:     "",
   submissionUrl:   "https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=submission.yml",
-  bootLines:       ["CICFA OS v2.1.4 \u2014 booting...", "initializing exploit_surface_scanner...", "loading institutional_memory_core...", "target_lock: MUSEUM OF MODERN ART [CONFIRMED]", "operation_id: 001 // MOMA.SYM", "bounty_pool: LIVE \u2014 checking on-chain balance...", "jury_status: ASSEMBLED", "status: BREACH WINDOW OPEN", "WARNING: INSTITUTIONAL ARCHITECTURE UNSTABLE", "connecting to bounty_relay_network...", "CICFA SYSTEM ONLINE."],
-  alertText:       "⚠ WARNING: INSTITUTIONAL ARCHITECTURE COMPROMISED // BREACH WINDOW: ACTIVE // OPERATION 001 IN PROGRESS // TARGET: MUSEUM OF MODERN ART // REGISTER A+B OPEN // SUBMIT YOUR FINDINGS // BOUNTY POOL LIVE //",
+  bootLines:       ["CICFA OS v2.1.4 \u2014 booting...", "initializing exploit_surface_scanner...", "loading institutional_memory_core...", "target_lock: MUSEUM OF MODERN ART [CONFIRMED]", "operation_id: 001 // MOMA.SYM", "bounty_pool: FUNDING SUSPENDED \u2014 key compromised, swept 2026-07-10", "jury_status: ASSEMBLED", "status: BREACH WINDOW OPEN", "WARNING: INSTITUTIONAL ARCHITECTURE UNSTABLE", "connecting to bounty_relay_network...", "CICFA SYSTEM ONLINE."],
+  alertText:       "⚠ WARNING: INSTITUTIONAL ARCHITECTURE COMPROMISED // BREACH WINDOW: ACTIVE // OPERATION 001 IN PROGRESS // TARGET: MUSEUM OF MODERN ART // REGISTER A+B OPEN // SUBMIT YOUR FINDINGS // BOUNTY POOL: FUNDING SUSPENDED — POT ADDRESS COMPROMISED //",
 };
 </script>
 
@@ -1588,35 +1611,32 @@ function closeBreach() {
       setTimeout(() => fillEl.style.width = pct + '%', 200);
       goalEl.textContent = `${bal.toFixed(dp)} / ${target} ETH GOAL`;
       // The contributor table is maintained by hand; eth_getBalance can't name
-      // senders. So when the pot is non-empty but no rows are listed, don't claim
-      // "BE THE FIRST CONTRIBUTOR" — that contradicts a balance that's demonstrably
-      // on-chain. Point curious viewers at Etherscan, the source of truth.
+      // senders. Previous versions of this line swung between "BE THE FIRST
+      // CONTRIBUTOR" (denying a funded pot) and "CONTRIBUTIONS RECEIVED" (which
+      // now implies the pot still holds them). Neither is true: the wallet's
+      // full history is one contribution in on 2026-03-19 and an unauthorised
+      // sweep out on 2026-07-10. State that, and never invite a contribution
+      // while the key is compromised, whatever the balance reads.
       const cnt = staticContributors || 0;
       contEl.textContent = cnt > 0
         ? `${cnt} CONTRIBUTOR${cnt !== 1 ? 'S' : ''}`
-        : (bal > 0 ? 'CONTRIBUTIONS RECEIVED — SEE ETHERSCAN' : 'BE THE FIRST CONTRIBUTOR');
+        : 'FUNDING SUSPENDED — 1 CONTRIBUTION, SWEPT 2026-07-10';
 
-      // The empty-state row below the summary is static markup, so it kept
-      // reading "NO CONTRIBUTORS YET — BE THE FIRST" two lines under a summary
-      // that already said "CONTRIBUTIONS RECEIVED" — the panel contradicting
-      // itself about whether the pot has ever been funded. Only the summary was
-      // taught about the balance; the table was not. Fix the row too: we still
-      // can't name senders (eth_getBalance doesn't carry them and we run no
-      // indexer), but we can stop denying money that is demonstrably on-chain,
-      // and hand the viewer the address so they can check it themselves.
+      // Same correction for the empty-state row, which is static markup and so
+      // has to be told the truth explicitly. This wording is hand-maintained —
+      // the third hand-patch of this one surface (pot summary, then this row,
+      // now the sweep). The structural fix is to derive the rows from the
+      // wallet's transaction list instead of from prose; that is tracked, and
+      // it is an outside contributor's idea, so it is not being shipped ahead
+      // of the reply owed to them.
       if (emptyEl && cnt === 0) {
-        if (bal > 0) {
-          emptyEl.classList.add('received');
-          emptyEl.textContent = 'CONTRIBUTIONS RECEIVED — SENDERS NOT LISTED HERE · ';
-          const a = document.createElement('a');
-          a.href = `https://etherscan.io/address/${addr}`;
-          a.rel = 'noopener'; a.target = '_blank'; // one line on purpose: noopener must never drift from _blank
-          a.textContent = 'VERIFY ON ETHERSCAN';
-          emptyEl.appendChild(a);
-        } else {
-          emptyEl.classList.remove('received');
-          emptyEl.textContent = 'NO CONTRIBUTORS YET — BE THE FIRST';
-        }
+        emptyEl.classList.add('received');
+        emptyEl.textContent = 'ONE CONTRIBUTION RECEIVED 2026-03-19 · SWEPT OUT 2026-07-10 · ';
+        const a = document.createElement('a');
+        a.href = `https://etherscan.io/address/${addr}`;
+        a.rel = 'noopener'; a.target = '_blank'; // one line on purpose: noopener must never drift from _blank
+        a.textContent = 'VERIFY ON ETHERSCAN';
+        emptyEl.appendChild(a);
       }
     } else {
       valEl.textContent = '0.000';
@@ -1655,23 +1675,15 @@ function closeBreach() {
   setInterval(update, 1000);
 })();
 
-/* ── QR CODE ─────────────────────────────────────────────────── */
-let qrGenerated = false;
-function toggleQR() {
-  const container = document.getElementById('qr-container');
-  container.classList.toggle('visible');
-  if (!qrGenerated && typeof QRCode !== 'undefined' && CICFA.walletAddress) {
-    new QRCode(document.getElementById('qr-code'), {
-      text: 'ethereum:' + CICFA.walletAddress,
-      width: 160, height: 160,
-      colorDark: '#000', colorLight: '#fff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
-    qrGenerated = true;
-  }
-}
+/* The QR code is gone with the funding affordances: it encoded an
+   `ethereum:` payment URI for a compromised address, and it was the only
+   consumer of the qrcodejs CDN script, now also removed — a remote script
+   fetched on every page load for a feature that no longer exists is exactly
+   the kind of surface this page should not be carrying. copyAddress() and the
+   toast below are deliberately kept, unwired: they cost nothing locally and
+   get re-attached to the new address on rotation. */
 
-/* ── COPY ADDRESS ────────────────────────────────────────────── */
+/* ── COPY ADDRESS (unwired — see above) ──────────────────────── */
 function copyAddress() {
   if (!CICFA.walletAddress) return;
   const addr = CICFA.walletAddress;
