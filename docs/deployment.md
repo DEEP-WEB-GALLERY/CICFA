@@ -81,6 +81,8 @@ If the new version isn't showing after 5 minutes:
 | Loosening a narrow grep to stop it false-failing | The docs that *document* the mitigation quote the invitation in order to forbid it (`CLAUDE.md` §5, and §8's own pattern list). Extending §8's solicitation patterns to markdown red-FAILs both immediately, and the tempting repair — a looser pattern, or an any-of-these-will-do disclosure predicate — false-passes forever after. | Keep the literal tests literal. Normalise the *documents* onto one canonical notice sentence (`Do not send ETH to this address`, `POT_NOTICE` in the script) instead of teaching the check every phrasing. §8 applies solicitation patterns to `.html` only, on purpose, and says so where it does it. |
 | Reading a green health check as "the live site is current" | Checks 1–9 verify that the site is *up* and that the repo is *right*; until §10 nothing verified they were the same thing. A stalled or failed Pages build serves the previous commit forever, and the pass stays green through it — 200 OK, tree clean and equal to `origin/main`, §8 markers passing against bytes from before the fix. The funding suspension is exactly this shape of change, so the failure mode is "the invitation is still live and every monitor says fine". | `healthcheck.sh` §10 compares live bytes to `origin/main` bytes per verbatim-published file. If it WARNs "build probably still in flight", re-run after the deploy rather than dismissing it; if it FAILs, the venue is serving something this repo did not publish — check the Pages build before touching content. |
 | Asking what the platform publishes, but only asking one platform | Pages is not the only publisher. GitHub serves every tracked file itself at `raw.githubusercontent.com` and `/blob/main/` — **dot-directories included** — and compiles `.github/ISSUE_TEMPLATE/` into the program's live intake form at `/issues/new/choose`. So the paths §8 correctly excludes as "Jekyll skips these" are published anyway, by something else. The intake form is one of them: it promised the swept pot's ETH five times, one click from a page reading FUNDING SUSPENDED, while the monitor printed those paths as *outside the published surface* every run (DEE-42). | `healthcheck.sh` §11 covers the second venue on its own rules — raw-vs-`origin/main` parity for the dotted set, the pot-address rule, a two-sided check on the issue chooser, and a **pin** (`PAYOUT_PIN`) on the payout promises that are standing by board decision. Do not merge the two venues into one wider glob: `.claude/` and `.github/workflows/` genuinely are not published *as documents* by Jekyll. Two venues, two rules. |
+| Auditing only the venues you control | A fork shares git objects with its parent in both directions, and `mnrrxyz/CICFA` was forked 2026-03-19 — four months before the sweep — so its `main` **is** the pre-suspension page: invitation, click-to-copy, payment QR, compromised address. Today nothing renders it (`has_pages: false`, `/pages` 404s). That is one setting, owned by a third party, between us and a working donation page for a thief's wallet at a URL we cannot take down (DEE-50). | `healthcheck.sh` §12 enumerates the fork network **at run time** and asserts `has_pages == false` for every entry, forks-of-forks included. Never hard-code a fork name — the fork list is the instrument, so a fork created tomorrow is a new measurement. A rate-limited or failed API call is a WARN, never a PASS. Do not "fix" a fork by contacting, cloning or PRing it; and do not add a check on its bytes, which are unfixable by design. |
+| Adding a check whose failure is permanent | Tempting for history: the pot invitation is still served at `raw…/5113c57/index.html` and always will be, because history is append-only. A check for that red-FAILs forever, and a permanent red teaches everyone to read red as noise — the same defect as a green that hides a check which never ran, arriving from the other direction. | Only assert things that can be true. Where an exposure is real but unfixable, say so once in prose (here, and §12's closing SKIP line) instead of encoding it as a standing failure. |
 | `mktemp -t prefix` in a script CI will run | BSD-only. GNU coreutils needs trailing `X`s, so on a Linux runner mktemp fails, the caller gets an **empty path**, and whatever consumed it degrades to a warning. This kept §8's live check from running in CI for its entire life while every run still printed ✅ ALL GREEN. | Use the `tmpf` helper (full path + `XXXXXX`). More generally: when a check can't verify, decide whether that is really "unknown" or actually "broken" — §8 now FAILs if §1 already proved the site is up. |
 
 ---
@@ -95,8 +97,9 @@ Reproduces the manual checklist that has caught every past regression (DEE-14 de
 JS parses, **every configured RPC returns the balance AND is CORS-usable from the live
 origin and they all agree**, external scripts reachable (SKIPped while the page ships
 none — it dropped the QR CDN with the payment QR), issue templates present in repo +
-live, every `target="_blank"` carries `rel="noopener"`, and — §11 — the second venue
-GitHub publishes itself. Config is parsed straight out of
+live, every `target="_blank"` carries `rel="noopener"`, — §11 — the second venue
+GitHub publishes itself, and — §12 — no *fork* of this repo has Pages enabled.
+Config is parsed straight out of
 `index.html`, so the check can't drift from what the page ships. Exit 0 = all green,
 1 = a hard check failed. Transient blips (curl 000 / 5xx / 429) are retried before they
 count, so a one-shot network hiccup can't false-FAIL. Run it each maintenance pass:
@@ -156,17 +159,40 @@ hard-red and is the same rule as §8: the compromised address published here wit
 notice, or the chooser blurb inviting contributions (checked against the `name`/`url`/
 `about` values only, never the whole file — `config.yml` documents the phrase `339a5cb`
 removed from it, and a whole-file grep would red-FAIL on that documentation forever).
-*Money out* is a standing WARN: `submission.yml` promises the pot four times and
-`jury_registration.yml` once, and those are left standing **deliberately** — what the
-work owes is a board question (DEE-30 q3), and no visitor loses anything by reading a
-promise to be paid. §11 pins them (`PAYOUT_PIN`: path, promise-line count, and the
-`validations.required` of the `id: wallet` input — the *field*, not the prose about it)
-and restates them every run, so the decision stays a decision instead of decaying into
-an oversight nobody remembers making. Drift off the pin in either direction is a WARN,
-not a failure: **if the board answers DEE-30 q3 and the forms are edited, update
-`PAYOUT_PIN` in the same commit.** Parity reuses §10's shape and `DEPLOY_GRACE`, since
-raw's cache lags a push the way a build does. Plain HTTP to `github.com`, so **CI covers
-it** too.
+*Money out* was a standing WARN until DEE-44: `submission.yml` promised the pot four
+times and `jury_registration.yml` once, none of them touched since March. Those five
+promises are **gone** (`6d43e46`), and §11 changed job in the same commit — it no longer
+reports a standing defect, it *holds a landed fix*, two-sided like §8's page rule: a
+payout promise reappearing is red, and the suspension statement going missing is red.
+The board ruling that ordered it, in one line: an assertion under a pending board
+question waits, an inducement to a stranger's irreversible act does not. What is still
+board-held is narrower and still WARNed every run — the juror wallet stays `required`
+because the wallet *is* the vote (EIP-191), and `index.html`'s Unlock Condition 05 stays
+put under DEE-30 q3. §11 pins the whole surface (`PAYOUT_PIN`: path, promise-line count,
+and the `required` of the `id: wallet` input — the *field*, not the prose about it) and
+restates it every run, so the decision stays a decision instead of decaying into an
+oversight nobody remembers making. Drift off the pin is a WARN, not a failure: **if the
+board answers DEE-30 q3 and the forms are edited again, update `PAYOUT_PIN` in the same
+commit.** Parity reuses §10's shape and `DEPLOY_GRACE`, since raw's cache lags a push the
+way a build does. Plain HTTP to `github.com`, so **CI covers it** too.
+
+**§12 asks the question §§8, 10 and 11 all assume away: is this repository published by
+anyone but us?** Those three measure two venues we own. GitHub gives a fork the parent's
+objects — both directions — so the one fork of this repo, taken 2026-03-19 off `5113c572`,
+carries the page as it read before the sweep. Nothing renders it today: `has_pages` is
+`false` and `/repos/{fork}/pages` 404s, so the exposure is a setting away, and the setting
+belongs to someone else. §12 fetches `/repos/DEEP-WEB-GALLERY/CICFA/forks` **at run time**
+(following forks-of-forks, bounded by `FORK_API_MAX_CALLS`) and hard-reds on any fork with
+Pages enabled. Two disciplines make it trustworthy rather than decorative. First, **no
+hard-coded fork name** — the list is the instrument, so a fork created tomorrow is checked
+the day it appears, and `FORK_PIN` is a *receipt* whose only job is to make a change in the
+network visible (WARN, either direction; update it in the same commit when the change is
+legitimate). Second, **a rate-limited or failed API call is a WARN and never a PASS**:
+anonymous GitHub allows 60 requests an hour per IP, so set `HEALTHCHECK_GH_TOKEN` locally
+or let the workflow's `GITHUB_TOKEN` lift it — a green that hides a check which never ran
+is the exact failure §8 was built to prevent. What §12 deliberately does **not** do: touch
+the fork in any way (read-only public API — no clone, issue or PR), and assert anything
+about the fork's own bytes, which serve the March page and always will.
 
 **`.github/workflows/healthcheck.yml` — the scheduled monitor (cloud IP).**
 Runs the same script daily on a 06:17 UTC cron (GitHub queues scheduled jobs when

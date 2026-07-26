@@ -7,6 +7,7 @@
 #   - QR CDN reachable
 #   - GitHub issue-form templates present in repo AND live (jury / submission intake)
 #   - every target="_blank" anchor carries rel="noopener"
+#   - no fork of this repository has GitHub Pages enabled (§12)
 #
 # SCOPE — RPC/CORS drift is deliberately NOT checked here (HEALTHCHECK_SKIP_RPC=1).
 # The site's bounty pool reads the balance from free public Ethereum RPCs, and
@@ -46,6 +47,12 @@ jobs:
     timeout-minutes: 10
     env:
       HEALTHCHECK_SKIP_RPC: '1'   # cloud IP: skip the RPC probe (see header)
+      # Section 12 enumerates the fork network through the GitHub API. Anonymous
+      # requests are 60/h per IP and runner IPs are shared, so unauthenticated the
+      # check would WARN "unverified" on a bad draw — and a WARN nobody can act on
+      # decays into wallpaper. The default job token lifts it to 1000/h and reads
+      # nothing here that is not already public.
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5

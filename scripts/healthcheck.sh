@@ -24,6 +24,9 @@
 #  11. the SECOND venue: GitHub publishes this repo itself — raw/blob for every
 #      tracked file, dotted paths included, and .github/ISSUE_TEMPLATE as the
 #      program's live intake form. Checks 8 and 10 measure Pages only (DEE-42)
+#  12. no THIRD-PARTY venue: the fork network is enumerated at run time and no
+#      fork may have GitHub Pages enabled — a fork's main predates the funding
+#      suspension, so one switch we don't own makes it live again (DEE-50)
 #
 # Config (wallet + RPC list) is parsed straight out of index.html, so this
 # script can never drift from what the page actually ships. No jq required.
@@ -1003,6 +1006,206 @@ EOF
 
   # No silent caps, same rule as section 8.
   skip "not checked here: the 23 non-dotted files GitHub also serves at raw/blob — section 8 checks that content and section 10 checks the Pages copy"
+fi
+
+# ── 12. the fork network ─────────────────────────────────────────────────────
+# Sections 8, 10 and 11 ask what WE publish, at two venues we control. This asks
+# the question none of them can: who else can publish this repository, and have
+# they started?
+#
+# A GitHub fork shares objects with its parent in both directions. `mnrrxyz/CICFA`
+# was forked 2026-03-19 off 5113c572 — four months before the sweep — so its `main`
+# is the pre-suspension page: the invitation, the click-to-copy, the payment QR,
+# the compromised address. Today that content is only *readable* (raw and blob
+# answer 200, as they do for any public repo) and nothing renders it: the fork has
+# no Pages site and `/repos/{fork}/pages` 404s.
+#
+# The single setting between that and a live solicitation venue is `has_pages`,
+# and it belongs to someone else. If any fork ever switches Pages on, a rendered,
+# working donation page for a wallet whose key a thief holds goes live at a URL we
+# do not own, cannot edit and cannot take down. That is not a hypothetical failure
+# mode of this repo — it is the exact page we spent 8a9b87a removing, republished
+# by a third party, and no other check in this script would notice.
+#
+# The instrument is the fork LIST, fetched at run time, never a hard-coded name:
+# a fork created tomorrow has to be a new measurement, not an exception someone
+# remembered to add. The traversal follows forks-of-forks too, because a fork of
+# the fork is the same exposure one hop further out.
+#
+# Grading, and the two rules it exists to honour:
+#
+#   red   any fork with Pages enabled. One switch, one live venue.
+#   warn  the API refusing or failing. Unauthenticated GitHub is 60 requests an
+#         hour per IP and this runs in CI and locally, so being rate-limited is
+#         expected occasionally — and a check that did not run must never print
+#         PASS. That is the mktemp defect (a green hiding an unrun check) and the
+#         org-scale version of SELF-004; set HEALTHCHECK_GH_TOKEN (or GITHUB_TOKEN)
+#         to lift the limit rather than letting the WARN become wallpaper.
+#   warn  the network changing shape — a fork appearing or disappearing. Printing
+#         the count every run is the same discipline as section 8 printing what it
+#         enumerates: a number nobody states is a number nobody notices moving.
+#
+# Deliberately NOT here, and each omission is load-bearing:
+#   - The fork's own bytes. They serve the March page and always will; git objects
+#     are shared and a third party's repository is not ours to edit. A check whose
+#     failure is permanent by design is worse than no check — a standing red trains
+#     the reader to skim red, which is the same defect as a green that hides an
+#     unrun check. Same reason this script greps no history: history is append-only.
+#   - Any contact with the fork. No clone-push, no issue, no PR. Read-only, from
+#     the public API, exactly as any visitor could.
+sec "12. fork network: no fork publishes this repo as a venue (DEE-50)"
+
+FORK_ROOT="DEEP-WEB-GALLERY/CICFA"
+# A receipt, not the instrument — the assertion above runs over what the API
+# returns, and this list is never consulted to decide what to check. Enumerated at
+# source 2026-07-26: one fork, created 2026-03-19T10:03:33Z off 5113c572,
+# has_pages false, zero forks of its own. Same standing rule as PAYOUT_PIN: when
+# the network legitimately changes, update this in the same commit, because a
+# stale pin turns the drift warning into noise and that is how a check dies.
+FORK_PIN="mnrrxyz/CICFA"
+FORK_API_MAX_CALLS=12   # bound the traversal: anonymous GitHub is 60 req/h/IP
+
+if ! command -v python3 >/dev/null 2>&1; then
+  warn "python3 unavailable — the fork network was NOT enumerated. An unrun check is not a pass."
+else
+  ft=$(tmpf cicfa_forks)
+  python3 - "$FORK_ROOT" "$FORK_API_MAX_CALLS" "$CURL_MAX" >"$ft" 2>/dev/null <<'PY'
+import json, os, sys, urllib.error, urllib.request
+
+root, max_calls, timeout = sys.argv[1], int(sys.argv[2]), float(sys.argv[3])
+# Optional, and only ever used to raise the anonymous rate limit. Everything read
+# here is public; the check is correct without a token, just more likely to WARN.
+tok = os.environ.get("HEALTHCHECK_GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+
+calls = 0
+remaining = "?"
+
+def emit(*fields):
+    print("\t".join(str(f) for f in fields))
+
+def get(url):
+    global calls, remaining
+    calls += 1
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "cicfa-healthcheck",
+    })
+    if tok:
+        req.add_header("Authorization", "Bearer " + tok)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            remaining = r.headers.get("x-ratelimit-remaining", "?")
+            emit("CALL", "ok", url, remaining)
+            return json.loads(r.read().decode("utf-8")), (r.headers.get("Link") or "")
+    except urllib.error.HTTPError as e:
+        h = e.headers or {}
+        remaining = h.get("x-ratelimit-remaining", "?")
+        if e.code in (403, 429) and remaining == "0":
+            why = "rate-limited (%s req/h for this IP)" % h.get("x-ratelimit-limit", "?")
+        else:
+            why = "HTTP %d" % e.code
+        emit("CALL", why, url, remaining)
+    except Exception as e:
+        emit("CALL", "unreachable (%s)" % type(e).__name__, url, remaining)
+    return None, ""
+
+def next_page(link):
+    for part in link.split(","):
+        bits = part.split(";")
+        if len(bits) >= 2 and 'rel="next"' in bits[1] and bits[0].strip().startswith("<"):
+            return bits[0].strip()[1:-1]
+    return ""
+
+queue = [(root, 0)]
+seen = {root.lower()}
+unvisited = 0
+
+while queue:
+    repo, depth = queue.pop(0)
+    url = "https://api.github.com/repos/%s/forks?per_page=100" % repo
+    while url:
+        if calls >= max_calls:
+            unvisited += 1
+            break
+        body, link = get(url)
+        if body is None:
+            break
+        for f in body:
+            name = f.get("full_name") or "?"
+            hp = f.get("has_pages")
+            state = "true" if hp is True else ("false" if hp is False else "unknown")
+            kids = f.get("forks_count")
+            emit("FORK", name, state, depth + 1, "?" if kids is None else kids)
+            if name.lower() not in seen:
+                seen.add(name.lower())
+                if kids:
+                    queue.append((name, depth + 1))
+        url = next_page(link)
+
+emit("RATE", remaining, calls)
+if unvisited:
+    emit("TRUNC", unvisited)
+PY
+
+  ok_calls=$(awk -F'\t' '$1=="CALL" && $2=="ok"' "$ft" | grep -c . || true)
+  bad_calls=$(awk -F'\t' '$1=="CALL" && $2!="ok"{print $2" <- "$3}' "$ft")
+  forks=$(awk -F'\t' '$1=="FORK"{print $2"\t"$3"\t"$4"\t"$5}' "$ft")
+  nforks=$(printf '%s\n' "$forks" | grep -c . || true)
+  budget=$(awk -F'\t' '$1=="RATE"{print $2}' "$ft"); budget=${budget:-?}
+  trunc=$(awk -F'\t' '$1=="TRUNC"{print $2}' "$ft")
+
+  # Anything short of a clean answer is unverified, and says so before the verdict
+  # below, so a partial enumeration can never be read as a clean one.
+  if [ -n "$bad_calls" ]; then
+    warn "the GitHub API did not answer $(printf '%s\n' "$bad_calls" | grep -c .) call(s) — this check is UNVERIFIED, not clean. Set HEALTHCHECK_GH_TOKEN (or GITHUB_TOKEN in CI) to lift the 60/h anonymous limit:"
+    show "$bad_calls"
+  fi
+  [ -n "$trunc" ] && warn "traversal stopped at FORK_API_MAX_CALLS=$FORK_API_MAX_CALLS with $trunc repo(s) unvisited — their forks were NOT checked. Raise the cap or supply a token; do not read this pass as covering the whole network."
+
+  if [ "$ok_calls" -eq 0 ]; then
+    warn "fork network NOT enumerated — no API call succeeded, so nothing here says the forks are clean. Re-run when the limit resets."
+  else
+    pages_on=$(printf '%s\n' "$forks"  | awk -F'\t' '$2=="true"{print $1}')
+    pages_unk=$(printf '%s\n' "$forks" | awk -F'\t' '$1!="" && $2!="true" && $2!="false"{print $1}')
+    if [ -n "$pages_on" ]; then
+      red "A FORK HAS GITHUB PAGES ENABLED — its main predates the suspension, so this is a live page soliciting ETH to the compromised wallet at a URL we do not own and cannot take down:"
+      show "$(printf '%s\n' "$pages_on" | while IFS= read -r fn; do
+        [ -n "$fn" ] || continue
+        printf '%s -> https://%s.github.io/%s/\n' "$fn" "${fn%%/*}" "${fn#*/}"
+      done)"
+    else
+      [ -n "$pages_unk" ] && warn "has_pages not reported for: $(printf '%s\n' "$pages_unk" | tr '\n' ' ')— unverified, not clean"
+      nknown=$(printf '%s\n' "$forks" | awk -F'\t' '$2=="false"' | grep -c . || true)
+      # A PASS is only printed for what was actually confirmed. "0 of 1 confirmed"
+      # is not a pass in any useful sense; where nothing was readable the WARN
+      # above stands alone, because that is what an unrun check looks like.
+      if [ "$nforks" -eq 0 ]; then
+        pass "the fork network is empty (API budget left: $budget) — nobody else publishes this repo"
+      elif [ "$nknown" -gt 0 ]; then
+        pass "$nknown of $nforks fork(s) in the network confirmed has_pages=false (API budget left: $budget)"
+      fi
+    fi
+
+    # The count is printed above whatever it is; this says whether it MOVED. Both
+    # directions matter: a new fork is a new repo that can flip the switch, and a
+    # pinned fork vanishing means the receipt above no longer describes reality.
+    pinf=$(tmpf cicfa_forkpin); livef=$(tmpf cicfa_forklive)
+    printf '%s\n' "$FORK_PIN" | grep -v '^$' | sort > "$pinf"
+    printf '%s\n' "$forks" | awk -F'\t' '$1!=""{print $1}' | sort > "$livef"
+    newf=$(comm -13 "$pinf" "$livef"); gonef=$(comm -23 "$pinf" "$livef")
+    if [ -z "$newf" ] && [ -z "$gonef" ]; then
+      pass "fork network unchanged from the pin ($(grep -c . "$pinf") fork(s))"
+    else
+      [ -n "$newf" ]  && warn "NEW FORK(S) since the pin — each one is a repository that can enable Pages at any time; if this is the new normal, update FORK_PIN in the same commit: $(printf '%s' "$newf" | tr '\n' ' ')"
+      [ -n "$gonef" ] && warn "pinned fork(s) no longer in the network (deleted or made private) — update FORK_PIN: $(printf '%s' "$gonef" | tr '\n' ' ')"
+    fi
+    rm -f "$pinf" "$livef"
+  fi
+
+  # No silent caps, same rule as sections 8 and 11.
+  skip "not checked here: a fork's own raw/blob bytes. They serve the pre-suspension page and always will — shared git objects, someone else's repository. What can change is whether anything RENDERS them, which is the assertion above"
+  rm -f "$ft"
 fi
 
 # ── verdict ──────────────────────────────────────────────────────────────────
