@@ -14,7 +14,8 @@
 #   6. GitHub issue-form templates present in repo and live
 #   7. every target="_blank" anchor carries rel="noopener"
 #   8. funding suspension holds: no solicitation, disclosure intact (DEE-30) —
-#      on index.html *and* on every other page GitHub Pages publishes
+#      on index.html, on every other page GitHub Pages publishes, and on every
+#      document it publishes beside them (default Jekyll serves the whole repo)
 #   9. the regeneration interlocks that stop the invitation being re-published
 #      are still armed — local pass only, the AUTORUN pack is a separate repo
 #
@@ -289,8 +290,17 @@ onclick=\"copyAddress()\"
 new QRCode
 ethereum:' +"
 
+# One notice literal for the whole venue. index.html carries it in the pot alert;
+# every document that names the wallet now carries the same sentence beside the
+# address (DEE-34 normalised five of them onto it). Keeping it a single string is
+# what lets the disclosure rule stay a plain literal test across two dozen
+# heterogeneous files instead of a per-filetype family of alternatives — an
+# any-of-these-will-do predicate passes as long as *some* word survives, which is
+# the loose-grep trap the pattern comment above exists to avoid.
+POT_NOTICE="Do not send ETH to this address"
+
 disclose_patterns="Funding suspended
-Do not send ETH to this address"
+$POT_NOTICE"
 
 solicit_hits() {   # echo every solicitation pattern present in file $1
   local f="$1" p
@@ -352,25 +362,69 @@ else
 fi
 rm -f "$livefile"
 
-# Every OTHER page GitHub Pages publishes. The mitigation — and everything above
-# — was scoped to index.html because that is where the invitation was. But Pages
-# serves the whole repo: programs/console_vB01/index.html is live at
-# <LIVE_URL>programs/console_vB01/index.html right now, and nothing here would
-# have noticed a solicitation appearing on it. A second page is precisely where
-# one survives a cleanup of the first. Pages are found by glob, never a
-# hard-coded list, so one added later is covered the day it lands.
+# ── what the venue actually publishes ───────────────────────────────────────
+# Everything above is scoped to index.html, because that is where the invitation
+# was. But Pages does not publish index.html — it publishes the repository. There
+# is no .nojekyll and no _config.yml here, so the default Jekyll build serves
+# every tracked file outside a dot-directory: markdown rendered to <name>.html
+# and, for most of it, the raw source beside it. Probed file-by-file: 23 of 31
+# tracked files are reachable across ~35 URLs, and the only things skipped are the
+# dotted paths (.claude/, .github/, .gitignore).
 #
-# Two rules per secondary page. No solicitation — same patterns, same reason.
-# And a narrower form of the disclosure rule than index.html's: a sub-page is
-# not required to carry the warning in general, but it may not *publish the
+# So the '*.html' glob this section used to enumerate was still the shape of the
+# previous search rather than the shape of the venue: it covered 2 of the 23
+# published documents, and five of the 21 it missed name the compromised wallet
+# (DEE-34). The enumeration below is derived and follows Jekyll's own rule — skip
+# dotted paths, ship the rest — instead of a file extension, so a document added
+# later is covered the day it lands.
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  tracked=$(git -C "$REPO_ROOT" ls-files 2>/dev/null)
+else
+  tracked=$(cd "$REPO_ROOT" && find . -type f -not -path './.git/*' 2>/dev/null | sed 's|^\./||')
+fi
+published=$(echo "$tracked" | grep -v '^\.' | grep -v '/\.' | grep -v '^$' || true)
+dotted=$(echo "$tracked" | grep -e '^\.' -e '/\.' | grep -v '^$' || true)
+
+# Every URL a tracked file may answer on. Probed rather than predicted: which form
+# Jekyll serves is a plugin's business, not ours — a file with front matter is
+# rendered and its source withheld, README.md is left static and served raw only —
+# and adding .nojekyll, a live question on DEE-33, would flip every one of them to
+# raw. Probing both forms means this check follows that disposition either way
+# instead of silently contradicting it.
+live_url_forms() {
+  case "$1" in
+    *.md) printf '%s\n%s\n' "$1" "${1%.md}.html" ;;
+    *)    printf '%s\n' "$1" ;;
+  esac
+}
+
+# Fetch $1 into $2, retrying transient failures (curl 000 / 5xx / 429) like every
+# other HTTP check here. $3 says whether a 404 is worth retrying: for a page that
+# must be published it is, because a CDN can 404 mid-deploy; for one form of a
+# markdown source it is not — that 404 just means Jekyll served the other form,
+# and there are eight of them, which would add half a minute of sleeping to every
+# pass. Echoes the last status seen.
+fetch_page() {
+  local url="$1" out="$2" retry404="$3" code="" i=1
+  while :; do
+    code=$(curl -s -m "$CURL_MAX" -o "$out" -w '%{http_code}' "$url" 2>/dev/null)
+    [ "$code" = "200" ] && break
+    [ "$code" = "404" ] && [ "$retry404" = 0 ] && break
+    [ "$i" -ge "$HTTP_RETRIES" ] && break
+    i=$((i+1)); sleep "$RETRY_SLEEP"
+  done
+  printf '%s' "$code"
+}
+
+# Every OTHER published *page*. A second page is precisely where a solicitation
+# survives a cleanup of the first: programs/console_vB01/index.html is live at
+# <LIVE_URL>programs/console_vB01/index.html and nothing here had ever looked at
+# it. Two rules per page. No solicitation — same patterns, same reason. And a
+# narrower form of the disclosure rule than index.html's: a sub-page is not
+# required to carry the warning in general, but it may not *publish the
 # compromised address* without one. Naming the wallet is what turns a page into
 # somewhere a visitor can send money.
-if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
-  pages=$(git -C "$REPO_ROOT" ls-files '*.html' 2>/dev/null)
-else
-  pages=$(cd "$REPO_ROOT" && find . -name '*.html' -not -path './.git/*' 2>/dev/null | sed 's|^\./||')
-fi
-others=$(echo "$pages" | grep -v '^index\.html$' | grep -v '^$')
+others=$(echo "$published" | grep '\.html$' | grep -v '^index\.html$' || true)
 if [ -z "$others" ]; then
   skip "no secondary published pages in the repo"
 else
@@ -384,7 +438,7 @@ else
       pok=0
       red "repo $p: FUNDING SOLICITATION on a published page (Pages serves this too):"; show "$phits"
     fi
-    if [ -n "$wallet" ] && grep -Fqi "$wallet" "$pf" && ! grep -Fq "Do not send ETH to this address" "$pf"; then
+    if [ -n "$wallet" ] && grep -Fqi "$wallet" "$pf" && ! grep -Fq "$POT_NOTICE" "$pf"; then
       pok=0
       red "repo $p: publishes the compromised pot address with no suspension notice"
     fi
@@ -393,18 +447,12 @@ else
     # the live copy of that same page — same two-sided logic as the main page,
     # same convention: a fetch failure is a WARN, section 1 owns liveness.
     pfile=$(tmpf cicfa_page)
-    pattempt=1
-    while :; do
-      pcode=$(curl -s -m "$CURL_MAX" -o "$pfile" -w '%{http_code}' "$LIVE_URL$p" 2>/dev/null)
-      [ "$pcode" = "200" ] && break
-      [ "$pattempt" -ge "$HTTP_RETRIES" ] && break
-      pattempt=$((pattempt+1)); sleep "$RETRY_SLEEP"
-    done
+    pcode=$(fetch_page "$LIVE_URL$p" "$pfile" 1)
     if [ "$pcode" = "200" ]; then
       lphits=$(solicit_hits "$pfile")
       if [ -n "$lphits" ]; then
         red "live $p: FUNDING SOLICITATION IS LIVE on a secondary page:"; show "$lphits"
-      elif [ -n "$wallet" ] && grep -Fqi "$wallet" "$pfile" && ! grep -Fq "Do not send ETH to this address" "$pfile"; then
+      elif [ -n "$wallet" ] && grep -Fqi "$wallet" "$pfile" && ! grep -Fq "$POT_NOTICE" "$pfile"; then
         red "live $p: publishes the compromised pot address with no suspension notice"
       else
         pass "live $p: no funding solicitation"
@@ -419,6 +467,83 @@ else
 $others
 EOF
 fi
+
+# Every published DOCUMENT — the other 21, plus this script, which Pages serves as
+# application/x-sh. These are prose, not pages carrying affordances, so the rule
+# here is the one that describes the actual harm: money can only reach the pot if
+# a published file hands a reader the address. Every published file must therefore
+# carry the notice wherever it names the wallet, on the repo copy and on every live
+# URL that answers.
+#
+# The solicitation patterns are deliberately NOT applied to these files, and that
+# is a stated boundary, not an oversight. Two published documents quote the
+# invitation in the course of forbidding it — CLAUDE.md §5's "⛔ STOP" warning, and
+# this script's own pattern list — so extending the patterns here red-FAILs both on
+# day one, and loosening them to compensate is the exact failure mode the pattern
+# comment above warns against: prose gives no syntactic fingerprint to tell a
+# quotation from an invitation the way onclick="copyAddress()" does. What that
+# leaves uncovered is an invitation carrying no address, which can only point a
+# reader at index.html — the one surface checked twice above.
+docs=$(echo "$published" | grep -v '\.html$' || true)
+doc_n=0; url_n=0; named=0; unserved=""
+while IFS= read -r d; do
+  [ -n "$d" ] || continue
+  df="$REPO_ROOT/$d"
+  [ -f "$df" ] || continue
+  doc_n=$((doc_n+1))
+  dok=1; names=0
+  if [ -n "$wallet" ] && grep -Fqi "$wallet" "$df"; then
+    names=1; named=$((named+1))
+    if ! grep -Fq "$POT_NOTICE" "$df"; then
+      dok=0
+      red "repo $d: publishes the compromised pot address with no suspension notice"
+    fi
+  fi
+  dlive=0
+  while IFS= read -r u; do
+    [ -n "$u" ] || continue
+    dfile=$(tmpf cicfa_doc)
+    dcode=$(fetch_page "$LIVE_URL$u" "$dfile" 0)
+    if [ "$dcode" = "200" ]; then
+      dlive=$((dlive+1)); url_n=$((url_n+1))
+      if [ -n "$wallet" ] && grep -Fqi "$wallet" "$dfile" && ! grep -Fq "$POT_NOTICE" "$dfile"; then
+        dok=0
+        red "live $u: publishes the compromised pot address with no suspension notice"
+      fi
+    elif [ "$dcode" != "404" ] && [ "$live_up" = 1 ]; then
+      # A 404 is Jekyll declining to serve this form, and the other form answers.
+      # Anything else, on a site section 1 just got 200 from, is broken plumbing
+      # rather than an absent document — the ae5ef98 lesson, kept.
+      dok=0
+      red "live $u fetch -> ${dcode:-<none>} but the site is up — this check is broken, not the document"
+    fi
+    rm -f "$dfile"
+  done <<EOF
+$(live_url_forms "$d")
+EOF
+  [ "$dlive" = 0 ] && unserved="$unserved$d
+"
+  # Only the documents that actually name the wallet get a line of their own —
+  # those are the ones where this invariant has something to hold. The rest are
+  # counted in the coverage line below: twenty PASS lines saying "no address in
+  # this file either" is how a log stops being read, which is how the mktemp bug
+  # survived every CI run for weeks.
+  if [ "$names" = 1 ] && [ "$dok" = 1 ]; then
+    pass "$d: pot address carries the suspension notice (repo + $dlive live URL(s))"
+  fi
+done <<EOF
+$docs
+EOF
+if [ "$doc_n" = 0 ]; then
+  skip "no published documents beside the HTML pages"
+else
+  pass "published surface: $doc_n document(s) / $url_n live URL(s) checked, $named naming the pot"
+fi
+# No silent caps. Name what sits outside the surface, every run, so the next reader
+# can tell a deliberate exclusion from a gap — the previous scope looked total and
+# was 2 of 23.
+[ -n "$dotted" ]   && skip "outside the published surface, Jekyll skips dotted paths: $(echo "$dotted" | tr '\n' ' ')"
+[ -n "$unserved" ] && skip "tracked but no live URL answers: $(echo "$unserved" | tr '\n' ' ')"
 
 # ── 9. regeneration interlocks ───────────────────────────────────────────────
 # DEE-30, one level upstream of section 8. Section 8 notices the invitation once

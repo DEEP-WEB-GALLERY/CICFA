@@ -23,7 +23,7 @@ tools: [generate_open_call.py, generate_social_posts.py, generate_email_blast.py
 | Bounty site (`index.html`) | ✅ Live at `https://deep-web-gallery.github.io/CICFA/` |
 | Submission template | ✅ `.github/ISSUE_TEMPLATE/submission.yml` |
 | Jury registration template | ✅ `.github/ISSUE_TEMPLATE/jury_registration.yml` |
-| Bounty wallet | ⚠ `0x7fC76C439c200151Dde0345B09BA02764B9143Ec` — **COMPROMISED, key held by a third party, swept 2026-07-10. Funding suspended; rotation pending on DEE-30.** |
+| Bounty wallet | ⚠ `0x7fC76C439c200151Dde0345B09BA02764B9143Ec` — **COMPROMISED, key held by a third party, swept 2026-07-10. Funding suspended; rotation pending on DEE-30. Do not send ETH to this address.** |
 | Open call HTML generator | ✅ `DWG_AUTORUN_BETA/tools/generate_open_call.py` |
 | Social posts generator | ✅ `DWG_AUTORUN_BETA/tools/generate_social_posts.py` |
 | Email blast generator | ✅ `DWG_AUTORUN_BETA/tools/generate_email_blast.py` |

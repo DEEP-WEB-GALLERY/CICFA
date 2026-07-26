@@ -81,6 +81,7 @@ intake via GitHub Issues using the templates above. Two registers:
   swept out on 2026-07-10 (nonce 0 — the wallet's first and only send was the
   theft). The live page states this and no longer invites contributions; the
   address stays published so the record can be checked, not funded.
+  Do not send ETH to this address.
   Do not present it as fundable. Do not substitute a replacement on your own
   authority — rotation needs a key the gallery holds and is a board decision.
 

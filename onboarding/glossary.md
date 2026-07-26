@@ -95,12 +95,12 @@ ETH held in the bounty wallet (`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`). Fu
 > other wallets drained by the same address. What remains is Ξ0.000021 of gas dust.
 > The description above is the program as designed; it is not what the pot can do
 > today. Nothing can be paid out of this address, and nothing should be sent to it.
-> Tracked as DEE-30; whether the pot is rotated, left suspended or retired is an open
-> board decision.
+> **Do not send ETH to this address.** Tracked as DEE-30; whether the pot is rotated,
+> left suspended or retired is an open board decision.
 
 ## Bounty wallet
 
-`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`. Don't change without explicit instruction — and note it is **compromised** (see above): don't present it as fundable either. Rotation requires a key the gallery holds, which makes it a board decision rather than a config change.
+`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`. Don't change without explicit instruction — and note it is **compromised** (see above): don't present it as fundable either. **Do not send ETH to this address.** Rotation requires a key the gallery holds, which makes it a board decision rather than a config change.
 
 ---
 

@@ -46,7 +46,7 @@ The role responsible for moving an operation from "configured" to "live" and kee
 
 - Do **not** push to `main` or run `deploy_to_gh_pages.py` with `dry_run = False` without explicit confirmation from `@MarketDepravation`.
 - Do **not** send the email blast without confirming `sender_email` is real and monitored.
-- Do **not** change the bounty wallet (`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`) without explicit instruction. ⚠ **That address is compromised** — its key is held by a third party and the pot was swept 2026-07-10 (DEE-30). So: don't substitute a new address on your own authority, *and* don't treat this one as fundable. Never invite a contribution to it, and never confirm an ETH transfer out of it. Funding is suspended; rotation is a board decision.
+- Do **not** change the bounty wallet (`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`) without explicit instruction. ⚠ **That address is compromised** — its key is held by a third party and the pot was swept 2026-07-10 (DEE-30). So: don't substitute a new address on your own authority, *and* don't treat this one as fundable. Never invite a contribution to it, and never confirm an ETH transfer out of it. **Do not send ETH to this address.** Funding is suspended; rotation is a board decision.
 - Treat the live site as production. If you need to experiment, do it in `programs/<scratchpad>/`.
 
 ---

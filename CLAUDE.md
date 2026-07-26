@@ -159,6 +159,9 @@ open the relevant file in `workflows/`. Each is a numbered runbook.
 
 `0x7fC76C439c200151Dde0345B09BA02764B9143Ec` — referenced in `index.html`.
 
+> ⚠ **COMPROMISED — the private key is held by a third party and the pot was swept
+> 2026-07-10 (DEE-30). Do not send ETH to this address.**
+
 **The private key to this address is in someone else's hands.** On 2026-07-10 the
 only contribution the pot ever received was swept out of it (nonce 0 — the first
 and only send from the wallet was the theft), to a collection address that drained
