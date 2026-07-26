@@ -734,12 +734,21 @@ fi
 # printed every run, "outside the published surface", was true of one venue and
 # false of the other, and the intake form lives on the false side.
 #
-# What that hid: submission.yml promises the swept pot's ETH four times and
+# What that hid: submission.yml promised the swept pot's ETH four times and
 # jury_registration.yml once, none of them edited since 5113c57 (2026-03-19), one
 # click from a page that has read FUNDING SUSPENDED since 8a9b87a. We had already
 # treated this directory as publication-relevant — 339a5cb edited config.yml in it
 # to pull "fund the pot" off the chooser — while the monitor went on calling it
 # out-of-surface.
+#
+# DEE-44 (2026-07-26) struck all five of those promises and made the submitter's
+# wallet optional, so this section changed job in the same commit: it no longer
+# reports a standing defect, it holds a landed fix. Board ruling, in one line: an
+# assertion under a pending board question waits, an inducement to a stranger's
+# irreversible act does not. A required ETH address on a public issue form is the
+# second thing — it publishes a submitter's on-chain identity permanently, for a
+# prize that cannot be paid. index.html's Unlock Condition 05 is the first, and
+# stays exactly as it is under DEE-30 q3; nothing here touches it.
 #
 # Scope: the dotted tracked paths, the set section 8 skips. GitHub serves the other
 # 23 at raw/blob as well, but section 8 already checks those bytes and section 10
@@ -752,14 +761,14 @@ fi
 #   red   money IN. The compromised address published here without the notice, or
 #         the chooser inviting contributions again. Same rule as section 8, because
 #         the harm is the same: a reader who can send funds to a thief.
-#   warn  money OUT, standing. The payout promises are left in place DELIBERATELY.
-#         What the work owes is a live board question (DEE-30 q3) and no visitor
-#         can lose anything by reading a promise to be paid, so this section does
-#         not fix them and must not. It pins them and restates them every run, so
-#         a decision stays a decision instead of decaying into an oversight nobody
-#         remembers making.
-#   warn  drift off that pin in either direction — a promise added, or one quietly
-#         withdrawn. Both mean the record is stale; neither is an emergency.
+#   red   money OUT, promised again. Two-sided exactly like section 8's page rule:
+#         no form may promise a payout from the swept pot, AND each must say the
+#         funding is suspended. DEE-44 removed the promises; a promise reappearing
+#         is that repair coming undone, not a fresh policy choice.
+#   warn  drift off the pin in either direction — a wallet field going back to
+#         required, a form dropping out of the set. Both mean the record is stale;
+#         neither is an emergency, and the submitter field returning to required is
+#         legitimately the board's to decide (DEE-30 rotation / make_good).
 #   red   the venue serving bytes we never pushed, past a cache grace. Section 10's
 #         rule, applied to the publisher section 10 does not reach.
 #
@@ -767,13 +776,19 @@ fi
 # cloud IP, so unlike the section-4 RPC probe CI covers this section too.
 sec "11. second venue: the GitHub-published set (DEE-42)"
 
-# Recorded 2026-07-26 from the files as they stand. Not a target and not an
-# approval — a receipt, so that a change to a deliberate exposure has to be seen.
-# Fields: <path> <payout-promise lines> <wallet field required, or ->. If the board
-# answers DEE-30 q3 and these forms are edited, update this pin in the same commit;
-# a stale pin turns the drift warning into noise, which is how a check dies.
-PAYOUT_PIN=".github/ISSUE_TEMPLATE/submission.yml 4 true
-.github/ISSUE_TEMPLATE/jury_registration.yml 1 true"
+# Recorded 2026-07-26 from the files as they stand — updated in the DEE-44 commit
+# that changed them, per the standing rule below. Not a target and not an approval:
+# a receipt, so that a change to this surface has to be seen.
+# Fields: <path> <payout-promise lines> <wallet field required, or ->.
+# submission.yml 0 false — DEE-44 struck four promises and made the wallet optional.
+# jury_registration.yml 0 true — one promise struck; the juror wallet STAYS required
+# because the wallet is the vote (EIP-191, docs/jury_protocol.md:12/18). What was
+# missing there was disclosure, not optionality, and the form now states it before
+# the field. If the board answers DEE-30 and these forms are edited again, update
+# this pin in the same commit; a stale pin turns the drift warning into noise, which
+# is how a check dies.
+PAYOUT_PIN=".github/ISSUE_TEMPLATE/submission.yml 0 false
+.github/ISSUE_TEMPLATE/jury_registration.yml 0 true"
 
 # Literal promises to pay out of the pot. Section 8's solicitation patterns are
 # deliberately kept off prose because a quotation and an invitation look alike in
@@ -906,10 +921,44 @@ $PAYOUT_PIN
 EOF
   [ "$drift" = 0 ] && pass "payout surface matches the pin: nothing newly promised, nothing quietly withdrawn"
 
-  # Said out loud every run, on purpose. This is the one line in the pass that is
-  # not a defect report: it is the shape of a decision the board is holding.
-  if [ "$forms" -gt 0 ]; then
-    warn "STANDING, board-held (DEE-30 q3): $tot_p payout promise(s) across $forms GitHub-published form(s), ETH address required in $tot_w — the pot was swept 2026-07-10 and cannot pay. Left standing deliberately: monitor, do not fix here."
+  # Two-sided, like section 8's page rule and for the same reason: the promise has
+  # to be absent AND the suspension has to be said out loud. Before DEE-44 this half
+  # was a standing warning about a defect the board was holding; now it is the
+  # interlock that holds the repair, in the section-9 shape.
+  if [ "$tot_p" = 0 ]; then
+    pass "intake forms: no payout promised from the swept pot"
+  else
+    red "intake forms: A PAYOUT PROMISE IS BACK ($tot_p line(s)) — the pot was swept 2026-07-10 and cannot pay; DEE-44 removed these:"
+    show "$(while IFS= read -r s; do [ -n "$s" ] || continue; sp=${s%% *}; rest=${s#* }; sn=${rest%% *}
+      [ "$sn" = 0 ] || printf '%s: line(s) %s\n' "$sp" "$(promise_lines "$REPO_ROOT/$sp" | sort -un | tr '\n' ' ')"
+    done <<INNER
+$surface
+INNER
+)"
+  fi
+
+  # The other side: each pinned form must still state the suspension itself. A form
+  # that merely stops promising, without saying why, reads as an oversight to the
+  # next editor and gets "helpfully" restored.
+  while IFS= read -r w; do
+    [ -n "$w" ] || continue
+    wp=${w%% *}; wf="$REPO_ROOT/$wp"
+    [ -f "$wf" ] || continue
+    if grep -Fq "$CHOOSER_NOTICE" "$wf"; then
+      pass "${wp##*/}: states that funding is suspended"
+    else
+      red "${wp##*/}: the funding-suspension statement is GONE — DEE-44 undone; the form implies a payout that cannot happen"
+    fi
+  done <<EOF
+$PAYOUT_PIN
+EOF
+
+  # Said out loud every run, on purpose, and smaller than it was. This is the one
+  # line in the pass that is not a defect report: it is the shape of what the board
+  # is still holding. The promises are gone; the address collection is not, because
+  # a juror's wallet IS their vote and the submitter's field is DEE-30 business.
+  if [ "$tot_w" -gt 0 ]; then
+    warn "STANDING, board-held: $tot_w of $forms GitHub-published form(s) still require an ETH address (juror seats are wallet-bound, EIP-191 — the wallet is the vote). Whether the submitter field returns to required is DEE-30 rotation/make_good, and index.html's Unlock Condition 05 stays put under DEE-30 q3. Monitor, do not fix here."
   fi
 
   # The chooser. Two-sided, exactly like section 8's page rule: no invitation to

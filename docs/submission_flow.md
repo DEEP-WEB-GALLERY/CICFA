@@ -36,13 +36,17 @@ How a vulnerability submission travels from issue to archive. One canonical refe
 
 Required fields:
 - Handle / name
-- ETH wallet (for payout if approved)
 - Register: A / B / A+B
 - Format: document / visual / artifact / multiple
 - Finding title
 - 2–5 sentence summary
 - Full disclosure (text or hosted link)
-- Submission agreement (work is original, no real-world harm intended, Register B was disclosed via CICFA)
+- Submission agreement (work is original, no real-world harm intended, and — if any part is Register B — no exploitation occurred and disclosure runs through CICFA)
+
+Optional fields:
+- ETH wallet — **optional since 2026-07-26 (DEE-44)**, and it was `required: true` before that. Funding is
+  suspended and the pot address is compromised, so no payout can be made to it; anything a submitter enters
+  is published permanently in the public issue. Whether it returns to required is a board question (DEE-30).
 
 Issue labels auto-applied: `submission`, `operation-001`.
 
@@ -70,7 +74,7 @@ issue:      #NNN
 format:     document | visual | artifact | multiple
 register:   A | B | A+B
 summary:    one-line
-wallet:     0x… (for payout if approved)
+wallet:     0x… | none (optional; no payout is possible — see Stage 5A)
 status:     intake | jury-review | approved | rejected | archived
 notes:      ⤷ any flags or routing
 ```

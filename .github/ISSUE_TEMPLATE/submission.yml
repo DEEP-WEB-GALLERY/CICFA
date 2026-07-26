@@ -1,5 +1,5 @@
 name: Vulnerability Disclosure — Submit Finding
-description: Submit your finding to the CICFA MOMA.SYM Bounty Program. Approved submissions receive the ETH prize pool.
+description: Submit your finding to the CICFA MOMA.SYM Bounty Program. Funding is suspended — approved submissions receive CICFA credit and exhibition attribution. No cash. No crypto.
 title: "[DISCLOSURE] "
 labels: ["submission", "operation-001"]
 body:
@@ -8,7 +8,12 @@ body:
       value: |
         ## CICFA BOUNTY PROGRAM — OPERATION 001: MOMA.SYM
         Submit your vulnerability disclosure below. Your submission will be reviewed by the CICFA Jury.
-        If approved, the ETH bounty pool transfers to your wallet address.
+
+        **Funding is suspended.** The pot address is compromised — its key is held by a third party
+        and the wallet was swept on 2026-07-10 — so nothing can be paid out for an approved
+        submission and nothing should be expected. What approval carries is what the program's
+        brief has described from the start: CICFA public credit on the program dashboard, and
+        exhibition attribution if selected for display. No cash. No crypto. Art-world capital only.
 
         **Two registers are valid — symbolic/conceptual (A) and technical/white-hat (B).**
         Both can coexist in one submission.
@@ -27,11 +32,16 @@ body:
   - type: input
     id: wallet
     attributes:
-      label: ETH Wallet Address
-      description: Your Ethereum address — required to receive the prize if approved. Will be verified by jury.
-      placeholder: "0x..."
+      label: ETH Wallet Address (optional — nothing can be paid to it)
+      description: >-
+        Optional, and it buys you nothing: funding is suspended, the pot address is compromised,
+        and no payment can be made for an approved submission. Anything you type here is published
+        permanently in a public GitHub issue, tying your on-chain identity to this handle for good.
+        Leave it blank. The field is kept only because the disposition of the pot is an open
+        question for the CICFA board, not because a submission needs an address.
+      placeholder: "leave blank"
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: register
@@ -106,15 +116,16 @@ body:
           required: true
         - label: I understand this is a symbolic/artistic project — no real-world harm is intended or involved
           required: true
-        - label: For Register B submissions — I confirm no exploitation occurred and findings are responsibly disclosed through CICFA
-          required: false
+        - label: If any part of my submission is Register B, I confirm no exploitation occurred and findings are responsibly disclosed through CICFA
+          required: true
 
   - type: markdown
     attributes:
       value: |
         ---
         **After submission:** The CICFA Jury will review your disclosure. You will be notified of their decision.
-        Approved submissions receive the ETH prize pool transferred to your provided wallet address.
+        **No payment accompanies approval** — funding is suspended and the pot address is compromised.
+        Approval carries CICFA public credit and exhibition attribution.
         All submissions are archived — the archive is the work.
 
         **Register B note:** Your finding will be held for 30 days while CICFA notifies the institution before publication.

@@ -16,6 +16,12 @@ body:
         Cast your vote (approve / reject) by signing a message with your ETH wallet.
         Simple majority wins. The vote is on-chain — transparent, verifiable, permanent.
 
+        **A wallet is required to serve, and it is public.**
+        Your ETH address *is* your seat: every vote is cast by signing a structured message with it
+        (EIP-191), so the address is the voting credential and cannot be omitted. It is published —
+        wallets are public, and yours appears on the CICFA jury board and beside your signed votes,
+        permanently, in this public repository. Register only if you accept that condition.
+
         **No compensation.** Jury credit on the CICFA dashboard and archive.
 
   - type: input
@@ -76,5 +82,7 @@ body:
         Each juror signs a structured message with their wallet (no gas fees — off-chain signature via EIP-191).
         Signatures are published publicly alongside the verdict.
 
-        **On approval:** ETH bounty transfers to the winning submitter's wallet.
+        **On approval:** nothing is paid to the submitter. Funding is suspended — the pot address is
+        compromised and the wallet was swept on 2026-07-10 — so approval carries CICFA public credit
+        and exhibition attribution, not money.
         Jury receives public credit on the CICFA dashboard and archive.
