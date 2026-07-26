@@ -684,6 +684,52 @@ fi
 # but a stale deploy or an altered one.
 sec "10. deploy parity (live bytes == pushed bytes)"
 DEPLOY_GRACE=900   # a Pages build in flight is not a stale deploy — see below
+
+# Query GitHub API for the latest Pages build status. Outputs tab-separated fields:
+#   BUILD\t<status>\t<commit>\t<duration>\t<created_at>\t<updated_at>\t<error_msg>
+# or:
+#   CALL\t<ok|error>\t<reason>
+check_pages_build() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    printf 'CALL\tunavailable\tpython3 not installed\n' >&2
+    return
+  fi
+  python3 - "$CURL_MAX" <<'BUILDCHECK'
+import json, os, sys, urllib.error, urllib.request
+timeout = float(sys.argv[1])
+tok = os.environ.get("HEALTHCHECK_GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+repo = "DEEP-WEB-GALLERY/CICFA"
+try:
+    url = f"https://api.github.com/repos/{repo}/pages/builds?per_page=1"
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "cicfa-healthcheck",
+    })
+    if tok:
+        req.add_header("Authorization", "Bearer " + tok)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        body = json.loads(r.read().decode("utf-8"))
+        if body and len(body) > 0:
+            b = body[0]
+            status = b.get("status", "unknown")
+            commit = b.get("commit", "")
+            duration = b.get("duration", 0)
+            created = b.get("created_at", "")
+            updated = b.get("updated_at", "")
+            error_msg = ""
+            if b.get("error"):
+                error_msg = b["error"].get("message", "")
+            print("\t".join(str(f) for f in ["BUILD", status, commit, duration, created, updated, error_msg]))
+        else:
+            print("CALL\terror\tno builds found", file=sys.stderr)
+except urllib.error.HTTPError as e:
+    code = e.code
+    print(f"CALL\terror\tHTTP {code}", file=sys.stderr)
+except Exception as e:
+    print(f"CALL\terror\t{type(e).__name__}", file=sys.stderr)
+BUILDCHECK
+}
 if ! git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   skip "not a git repo — nothing to compare the live surface against"
 elif [ "$live_up" != 1 ]; then
@@ -720,7 +766,49 @@ else
       p_ok=$((p_ok+1))
     elif [ "$ref_age" -lt "$DEPLOY_GRACE" ]; then
       p_bad=$((p_bad+1))
-      warn "live $p differs from $parity_ref, but that commit is only ${ref_age}s old — Pages build is probably still in flight; re-run before believing it"
+      # Divergence within grace window: check actual build status instead of inferring from time
+      buildcheck=$(check_pages_build 2>/dev/null)
+      build_line=$(printf '%s\n' "$buildcheck" | grep '^BUILD' | head -1)
+      if [ -n "$build_line" ]; then
+        build_status=$(printf '%s' "$build_line" | cut -f2)
+        build_duration=$(printf '%s' "$build_line" | cut -f4)
+        build_created=$(printf '%s' "$build_line" | cut -f5)
+        build_updated=$(printf '%s' "$build_line" | cut -f6)
+        error_msg=$(printf '%s' "$build_line" | cut -f7)
+
+        case "$build_status" in
+          built)
+            warn "live $p differs from $parity_ref, but $parity_ref is already built — divergence is CDN cache lag; re-run before believing it"
+            ;;
+          building)
+            if [ "$build_duration" = "0" ] && [ -n "$build_updated" ]; then
+              # duration=0 + stalled updated_at suggests build is stuck (not making progress)
+              now=$(date +%s)
+              updated_ts=$(python3 -c "from datetime import datetime; d='$build_updated'; print(int(datetime.fromisoformat(d.replace('Z','+00:00')).timestamp()))" 2>/dev/null || echo "0")
+              stuck_age=$((now - updated_ts))
+              if [ "$stuck_age" -gt 90 ]; then
+                red "live $p DIFFERS — Pages build for $parity_ref is STUCK (building ${stuck_age}s with no progress). Remedy: gh api -X POST repos/DEEP-WEB-GALLERY/CICFA/pages/builds"
+              else
+                warn "live $p differs from $parity_ref — Pages build in progress; re-run before believing it"
+              fi
+            else
+              warn "live $p differs from $parity_ref — Pages build in progress; re-run before believing it"
+            fi
+            ;;
+          errored)
+            if [ -n "$error_msg" ]; then
+              red "live $p DIFFERS — Pages build FAILED: $error_msg"
+            else
+              red "live $p DIFFERS — Pages build FAILED (no error details available)"
+            fi
+            ;;
+          *)
+            warn "live $p differs from $parity_ref, but that commit is only ${ref_age}s old — Pages build status unknown; re-run before believing it"
+            ;;
+        esac
+      else
+        warn "live $p differs from $parity_ref, but that commit is only ${ref_age}s old — Pages build is probably still in flight; re-run before believing it"
+      fi
     else
       p_bad=$((p_bad+1))
       red "live $p DIFFERS from $parity_ref (pushed $((ref_age/60))m ago) — the venue is serving bytes this repo did not publish: stale deploy or tampering"
