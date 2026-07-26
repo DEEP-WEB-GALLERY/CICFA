@@ -18,6 +18,9 @@
 #      document it publishes beside them (default Jekyll serves the whole repo)
 #   9. the regeneration interlocks that stop the invitation being re-published
 #      are still armed — local pass only, the AUTORUN pack is a separate repo
+#  10. deploy parity: every published file the venue serves verbatim is
+#      byte-identical to origin/main, so a stalled Pages build cannot keep
+#      serving a pre-suspension page while checks 1-8 all read green
 #
 # Config (wallet + RPC list) is parsed straight out of index.html, so this
 # script can never drift from what the page actually ships. No jq required.
@@ -626,6 +629,85 @@ EOF
     else
       pass "staged artifact carries no solicitation"
     fi
+  fi
+fi
+
+# ── 10. deploy parity ────────────────────────────────────────────────────────
+# Everything above asks whether the live site is healthy. Nothing above asks
+# whether it is *this repo*. Pages can fail or stall a build and go on serving an
+# older commit indefinitely, and every check here stays green straight through
+# that: the site answers 200, the tree is clean and equal to origin/main, and the
+# section-8 markers pass — against bytes nobody looked at the age of.
+#
+# That is precisely the gap the funding suspension cannot afford, because the
+# suspension IS a change to published bytes. The fix can be written, committed,
+# pushed, and verified in the repo while the page a visitor actually reads still
+# invites them to send money to a wallet somebody else holds the key to. Section 8
+# would not catch it either: it greps the live page for markers, so it only sees a
+# stale deploy when the staleness happens to involve one of those markers.
+#
+# So, per published file Jekyll copies verbatim: the bytes served at its own path
+# must equal the bytes at origin/main — the commit the venue was told to publish,
+# not HEAD, which may be ahead of what was pushed. Two deliberate softenings, so
+# this can never cry wolf: a file whose pushed copy has front matter is excluded
+# (Jekyll renders those and withholds the source — section 8 checks the rendered
+# form's content instead), and a non-200 is a WARN, because which form Jekyll
+# serves is a live disposition question (DEE-33) and section 1 already owns
+# liveness. Only 200-with-different-bytes is hard-red: that cannot be anything
+# but a stale deploy or an altered one.
+sec "10. deploy parity (live bytes == pushed bytes)"
+DEPLOY_GRACE=900   # a Pages build in flight is not a stale deploy — see below
+if ! git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  skip "not a git repo — nothing to compare the live surface against"
+elif [ "$live_up" != 1 ]; then
+  skip "live site is down (section 1) — parity is not the failure worth reporting"
+else
+  if git -C "$REPO_ROOT" rev-parse --verify -q origin/main >/dev/null 2>&1; then
+    parity_ref="origin/main"
+  else
+    parity_ref="HEAD"
+    warn "origin/main not available locally — comparing against HEAD instead, which may be ahead of what the venue was given"
+  fi
+  ref_ct=$(git -C "$REPO_ROOT" log -1 --format=%ct "$parity_ref" 2>/dev/null || echo 0)
+  ref_age=$(( $(date +%s) - ref_ct ))
+  p_ok=0; p_fm=0; p_404=0; p_bad=0; p_unpushed=0
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    blob=$(tmpf cicfa_blob)
+    if ! git -C "$REPO_ROOT" show "$parity_ref:$p" > "$blob" 2>/dev/null; then
+      # tracked here but absent from the pushed ref — nothing is live to compare
+      p_unpushed=$((p_unpushed+1)); rm -f "$blob"; continue
+    fi
+    if [ "$(head -1 "$blob")" = "---" ]; then
+      p_fm=$((p_fm+1)); rm -f "$blob"; continue
+    fi
+    lf=$(tmpf cicfa_live)
+    # retry404=0 on purpose: an unserved source is a WARN here, and retrying each
+    # one would add HTTP_RETRIES x RETRY_SLEEP per file to every pass for a
+    # condition this section does not treat as failure anyway.
+    lc=$(fetch_page "$LIVE_URL$p" "$lf" 0)
+    if [ "$lc" != "200" ]; then
+      p_404=$((p_404+1))
+      warn "live $p -> ${lc:-<none>}: published source not served — Jekyll disposition, or never deployed"
+    elif cmp -s "$blob" "$lf"; then
+      p_ok=$((p_ok+1))
+    elif [ "$ref_age" -lt "$DEPLOY_GRACE" ]; then
+      p_bad=$((p_bad+1))
+      warn "live $p differs from $parity_ref, but that commit is only ${ref_age}s old — Pages build is probably still in flight; re-run before believing it"
+    else
+      p_bad=$((p_bad+1))
+      red "live $p DIFFERS from $parity_ref (pushed $((ref_age/60))m ago) — the venue is serving bytes this repo did not publish: stale deploy or tampering"
+    fi
+    rm -f "$blob" "$lf"
+  done <<EOF
+$published
+EOF
+  parity_note="$p_fm rendered from front matter, source withheld"
+  [ "$p_unpushed" -gt 0 ] && parity_note="$parity_note; $p_unpushed not yet in $parity_ref"
+  if [ "$p_bad" = 0 ] && [ "$p_404" = 0 ]; then
+    pass "live surface is byte-identical to $parity_ref ($p_ok file(s) compared; $parity_note)"
+  else
+    warn "parity: $p_ok identical, $p_bad divergent, $p_404 unserved ($parity_note)"
   fi
 fi
 

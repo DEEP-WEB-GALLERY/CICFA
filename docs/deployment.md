@@ -79,6 +79,7 @@ If the new version isn't showing after 5 minutes:
 | Assuming `index.html` is the only page we publish | Pages serves the **whole repo** — `programs/console_vB01/index.html` is live too. A check scoped to `index.html` silently ignores it. | `healthcheck.sh` §8 globs every tracked `.html`. Keep it a glob; never re-scope a published-surface check to one filename. |
 | Assuming the *pages* are the published surface | There is no `.nojekyll` and no `_config.yml`, so Pages builds this repo with **default Jekyll: every tracked file outside a dot-directory is published** — markdown rendered to `<name>.html` *and*, for most of it, the raw source served beside it. 23 of 31 tracked files are reachable across ~35 URLs, including `scripts/healthcheck.sh` itself (`application/x-sh`). An `.html` glob covers 2 of them. That left 21 published documents — five naming the compromised pot wallet — outside the funding-suspension invariant (DEE-34). | `healthcheck.sh` §8 enumerates the surface by **Jekyll's rule** (skip dotted paths, ship the rest), not by extension, and probes both URL forms per file rather than predicting which one Jekyll serves. Every run prints what it excluded. If you add `.nojekyll`, the raw forms keep answering and the check follows — but that changes the extent of an accessioned artwork, so it is a **board decision** (DEE-33), not a cleanup. |
 | Loosening a narrow grep to stop it false-failing | The docs that *document* the mitigation quote the invitation in order to forbid it (`CLAUDE.md` §5, and §8's own pattern list). Extending §8's solicitation patterns to markdown red-FAILs both immediately, and the tempting repair — a looser pattern, or an any-of-these-will-do disclosure predicate — false-passes forever after. | Keep the literal tests literal. Normalise the *documents* onto one canonical notice sentence (`Do not send ETH to this address`, `POT_NOTICE` in the script) instead of teaching the check every phrasing. §8 applies solicitation patterns to `.html` only, on purpose, and says so where it does it. |
+| Reading a green health check as "the live site is current" | Checks 1–9 verify that the site is *up* and that the repo is *right*; until §10 nothing verified they were the same thing. A stalled or failed Pages build serves the previous commit forever, and the pass stays green through it — 200 OK, tree clean and equal to `origin/main`, §8 markers passing against bytes from before the fix. The funding suspension is exactly this shape of change, so the failure mode is "the invitation is still live and every monitor says fine". | `healthcheck.sh` §10 compares live bytes to `origin/main` bytes per verbatim-published file. If it WARNs "build probably still in flight", re-run after the deploy rather than dismissing it; if it FAILs, the venue is serving something this repo did not publish — check the Pages build before touching content. |
 | `mktemp -t prefix` in a script CI will run | BSD-only. GNU coreutils needs trailing `X`s, so on a Linux runner mktemp fails, the caller gets an **empty path**, and whatever consumed it degrades to a warning. This kept §8's live check from running in CI for its entire life while every run still printed ✅ ALL GREEN. | Use the `tmpf` helper (full path + `XXXXXX`). More generally: when a check can't verify, decide whether that is really "unknown" or actually "broken" — §8 now FAILs if §1 already proved the site is up. |
 
 ---
@@ -122,6 +123,24 @@ plain string tests, so **CI covers it**; §9 needs the AUTORUN pack checked out 
 SKIPs where it isn't (override the path with `HEALTHCHECK_AUTORUN_ROOT`). Neither section
 ever *executes* the generator or deploy script: if an interlock had been removed, running
 the deploy to find out would publish the invitation.
+
+**§10 asks the one question the other nine don't: is the live site *this repo*?**
+Sections 1–9 establish that the site is healthy and that the repo is correct — and both
+can be true while the venue serves an older commit, because a Pages build can fail or
+stall and keep serving the last good deploy indefinitely. Nothing in 1–9 notices: the
+site answers 200, the tree is clean and equal to `origin/main`, and §8's markers pass
+against whatever bytes are up there. For the funding suspension that gap is the whole
+risk, since the suspension *is* a change to published bytes — the fix can be committed,
+pushed and verified in the repo while the page a visitor reads still asks for ETH. §10
+compares, per published file Jekyll copies verbatim, the bytes served at its own path
+against **`origin/main`** (not `HEAD` — the venue was given what was pushed). Files whose
+pushed copy has front matter are excluded: Jekyll renders those and withholds the source,
+so §8 checks the rendered form's content instead. Two softenings keep it from crying
+wolf — a non-200 is a WARN (which form Jekyll serves is a live disposition question,
+DEE-33, and §1 already owns liveness), and a divergence within `DEPLOY_GRACE` (900s) of
+the pushed commit is a WARN, because a build in flight is not a stale deploy. Only
+200-with-different-bytes past the grace window is hard-red; that cannot be anything but
+a stale or altered deploy. Pure HTTP + git, so **CI covers it**.
 
 **`.github/workflows/healthcheck.yml` — the scheduled monitor (cloud IP).**
 Runs the same script daily on a 06:17 UTC cron (GitHub queues scheduled jobs when
