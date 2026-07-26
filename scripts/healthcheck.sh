@@ -80,12 +80,21 @@ httpcode() {
   done
 }
 
+# Portable scratch file. `mktemp -t PREFIX` is a BSD-ism: on GNU coreutils -t
+# takes a TEMPLATE and *requires* trailing X's, so it exits non-zero on Linux and
+# the caller silently gets an empty path. That is not hypothetical — it is how the
+# section-8 live-page check went unrun in every CI run from the day it shipped:
+# empty path -> `curl -o ''` fails -> empty status -> a non-fatal WARN -> ✅ ALL
+# GREEN. Always give mktemp a full path with X's; it behaves identically on both.
+tmpf() { mktemp "${TMPDIR:-/tmp}/$1.XXXXXX"; }
+
 [ -f "$INDEX" ] || { echo "FATAL: index.html not found at $INDEX"; exit 2; }
 
 # ── 1. live site ─────────────────────────────────────────────────────────────
 sec "1. live site"
 code=$(httpcode "$LIVE_URL")
-[ "$code" = "200" ] && pass "GET $LIVE_URL -> $code" || red "GET $LIVE_URL -> $code (expected 200)"
+if [ "$code" = "200" ]; then live_up=1; pass "GET $LIVE_URL -> $code"
+else live_up=0; red "GET $LIVE_URL -> $code (expected 200)"; fi
 
 # ── 2. repo state ────────────────────────────────────────────────────────────
 sec "2. repo state"
@@ -159,9 +168,9 @@ if [ -n "${HEALTHCHECK_SKIP_RPC:-}" ]; then
   echo "        drift is verified by the local maintenance pass (residential IP)."
 else
 usable=0
-balfile=$(mktemp -t cicfa_bal)
+balfile=$(tmpf cicfa_bal)
 for url in "${rpcs[@]}"; do
-  hdrs=$(mktemp -t cicfa_hdr)
+  hdrs=$(tmpf cicfa_hdr)
   bal=""; acao=""; attempt=1
   # Retry an RPC only while it hasn't returned a 0x* balance, so a transient blip
   # doesn't wrongly downgrade a healthy endpoint (or, if one hit all four at once,
@@ -314,7 +323,7 @@ else red "repo index.html: compromise disclosure MISSING — page no longer warn
 
 # live copy — this is the surface a visitor's money actually leaves from. A fetch
 # failure is a WARN (can't verify), never a FAIL: section 1 already owns liveness.
-livefile=$(mktemp -t cicfa_live)
+livefile=$(tmpf cicfa_live)
 lattempt=1
 while :; do
   lcode=$(curl -s -m "$CURL_MAX" -o "$livefile" -w '%{http_code}' "$LIVE_URL" 2>/dev/null)
@@ -331,6 +340,13 @@ if [ "$lcode" = "200" ]; then
   lext=$(grep -c '<script[^>]*src=' "$livefile" || true)
   if [ "$lext" -eq 0 ]; then pass "live page: ships zero external scripts (QR CDN stays gone)"
   else warn "live page: $lext external script(s) — the QR CDN was removed with the payment QR; verify what came back"; fi
+elif [ "$live_up" = 1 ]; then
+  # Section 1 just pulled this exact URL and got a 200, so "can't verify" is not
+  # an explanation — the check itself is broken. This is the escalation that would
+  # have caught the mktemp bug on day one instead of letting it WARN quietly
+  # through every CI run: an unverifiable invariant on a page that is demonstrably
+  # up is a failure, not a shrug.
+  red "live page fetch -> ${lcode:-<none>} but section 1 got 200 — the funding-suspension check is broken, not the site"
 else
   warn "live page fetch -> $lcode — funding-suspension invariant not verified against production"
 fi
@@ -376,7 +392,7 @@ else
 
     # the live copy of that same page — same two-sided logic as the main page,
     # same convention: a fetch failure is a WARN, section 1 owns liveness.
-    pfile=$(mktemp -t cicfa_page)
+    pfile=$(tmpf cicfa_page)
     pattempt=1
     while :; do
       pcode=$(curl -s -m "$CURL_MAX" -o "$pfile" -w '%{http_code}' "$LIVE_URL$p" 2>/dev/null)
@@ -393,6 +409,8 @@ else
       else
         pass "live $p: no funding solicitation"
       fi
+    elif [ "$live_up" = 1 ]; then
+      red "live $p fetch -> ${pcode:-<none>} but the site is up — this page's check is broken, not the site"
     else
       warn "live $p fetch -> $pcode — secondary page not verified against production"
     fi
