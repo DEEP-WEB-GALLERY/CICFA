@@ -21,6 +21,9 @@
 #  10. deploy parity: every published file the venue serves verbatim is
 #      byte-identical to origin/main, so a stalled Pages build cannot keep
 #      serving a pre-suspension page while checks 1-8 all read green
+#  11. the SECOND venue: GitHub publishes this repo itself — raw/blob for every
+#      tracked file, dotted paths included, and .github/ISSUE_TEMPLATE as the
+#      program's live intake form. Checks 8 and 10 measure Pages only (DEE-42)
 #
 # Config (wallet + RPC list) is parsed straight out of index.html, so this
 # script can never drift from what the page actually ships. No jq required.
@@ -54,6 +57,7 @@ INDEX="$REPO_ROOT/index.html"
 LIVE_URL="https://deep-web-gallery.github.io/CICFA/"
 ORIGIN="https://deep-web-gallery.github.io"
 RAW_BASE="https://raw.githubusercontent.com/DEEP-WEB-GALLERY/CICFA/main"
+CHOOSER_URL="https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new/choose"
 QR_CDN="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
 # The gas dust the 2026-07-10 sweep left behind (0.0000210 ETH). The pot's key is
 # in someone else's hands, so this is not a floor to grow from — it is a ceiling.
@@ -544,8 +548,10 @@ else
 fi
 # No silent caps. Name what sits outside the surface, every run, so the next reader
 # can tell a deliberate exclusion from a gap — the previous scope looked total and
-# was 2 of 23.
-[ -n "$dotted" ]   && skip "outside the published surface, Jekyll skips dotted paths: $(echo "$dotted" | tr '\n' ' ')"
+# was 2 of 23. It said "outside the published surface", which was the same mistake
+# one level up: outside THIS venue's surface. GitHub publishes every one of these
+# paths itself, and one of them is the intake form — section 11 (DEE-42).
+[ -n "$dotted" ]   && skip "Pages skips dotted paths, so not published HERE (GitHub publishes them itself — section 11): $(echo "$dotted" | tr '\n' ' ')"
 [ -n "$unserved" ] && skip "tracked but no live URL answers: $(echo "$unserved" | tr '\n' ' ')"
 
 # ── 9. regeneration interlocks ───────────────────────────────────────────────
@@ -709,6 +715,245 @@ EOF
   else
     warn "parity: $p_ok identical, $p_bad divergent, $p_404 unserved ($parity_note)"
   fi
+fi
+
+# ── 11. the second venue: what GitHub publishes itself ───────────────────────
+# DEE-42. Sections 8 and 10 both measure one publisher. Section 8 was re-scoped in
+# DEE-34 from a file-extension glob to Jekyll's own rule — skip dotted paths, ship
+# the rest — and that was right for the venue it measures. It is not the whole
+# picture, because Pages is not the only thing publishing this repository.
+#
+# GitHub publishes it too, through a mechanism Jekyll has nothing to do with:
+# every tracked file is readable at raw.githubusercontent.com and rendered at
+# /blob/main/, dotted paths included, and .github/ISSUE_TEMPLATE is compiled into
+# the program's actual intake UI at /issues/new/choose. Probed anonymously
+# 2026-07-26: raw and blob both answer 200 for .github/ISSUE_TEMPLATE/submission.yml
+# while Pages correctly 404s that same path, and the chooser 302s to a login —
+# not an absence of publication but the opposite, since it is served to everyone
+# signed in, which is exactly the population that can submit. So the line section 8
+# printed every run, "outside the published surface", was true of one venue and
+# false of the other, and the intake form lives on the false side.
+#
+# What that hid: submission.yml promises the swept pot's ETH four times and
+# jury_registration.yml once, none of them edited since 5113c57 (2026-03-19), one
+# click from a page that has read FUNDING SUSPENDED since 8a9b87a. We had already
+# treated this directory as publication-relevant — 339a5cb edited config.yml in it
+# to pull "fund the pot" off the chooser — while the monitor went on calling it
+# out-of-surface.
+#
+# Scope: the dotted tracked paths, the set section 8 skips. GitHub serves the other
+# 23 at raw/blob as well, but section 8 already checks those bytes and section 10
+# checks the Pages copy; this is the set nobody was looking at. Section 6 asserts
+# the two forms exist and answer 200 — this asks what they say, and whether the
+# venue serves what we pushed.
+#
+# Severity is graded by the direction money moves, and the grading is the point:
+#
+#   red   money IN. The compromised address published here without the notice, or
+#         the chooser inviting contributions again. Same rule as section 8, because
+#         the harm is the same: a reader who can send funds to a thief.
+#   warn  money OUT, standing. The payout promises are left in place DELIBERATELY.
+#         What the work owes is a live board question (DEE-30 q3) and no visitor
+#         can lose anything by reading a promise to be paid, so this section does
+#         not fix them and must not. It pins them and restates them every run, so
+#         a decision stays a decision instead of decaying into an oversight nobody
+#         remembers making.
+#   warn  drift off that pin in either direction — a promise added, or one quietly
+#         withdrawn. Both mean the record is stale; neither is an emergency.
+#   red   the venue serving bytes we never pushed, past a cache grace. Section 10's
+#         rule, applied to the publisher section 10 does not reach.
+#
+# All HTTP here is github.com and raw.githubusercontent.com, both reachable from a
+# cloud IP, so unlike the section-4 RPC probe CI covers this section too.
+sec "11. second venue: the GitHub-published set (DEE-42)"
+
+# Recorded 2026-07-26 from the files as they stand. Not a target and not an
+# approval — a receipt, so that a change to a deliberate exposure has to be seen.
+# Fields: <path> <payout-promise lines> <wallet field required, or ->. If the board
+# answers DEE-30 q3 and these forms are edited, update this pin in the same commit;
+# a stale pin turns the drift warning into noise, which is how a check dies.
+PAYOUT_PIN=".github/ISSUE_TEMPLATE/submission.yml 4 true
+.github/ISSUE_TEMPLATE/jury_registration.yml 1 true"
+
+# Literal promises to pay out of the pot. Section 8's solicitation patterns are
+# deliberately kept off prose because a quotation and an invitation look alike in
+# English; these are safe over this set because nothing dotted documents the
+# phrases the way CLAUDE.md documents the invitation, and because they are counted
+# by distinct LINE — two patterns matching one sentence stay one promise.
+payout_patterns="receive the ETH prize pool
+ETH bounty pool transfers
+receive the prize
+ETH bounty transfers"
+CHOOSER_NOTICE="Funding is suspended"
+
+promise_lines() {   # line numbers in $1 that promise a payout from the pot
+  local f="$1" p
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    grep -Fn "$p" "$f" 2>/dev/null | cut -d: -f1
+  done <<EOF
+$payout_patterns
+EOF
+  return 0
+}
+
+# The `required:` under the `id: wallet` input — the field, not the sentence beside
+# it. A form that makes an ETH address mandatory to collect a prize that cannot be
+# paid is the thing worth watching, and in a YAML form that is syntax, not prose:
+# assert on the field. Echoes nothing when the form has no wallet input.
+wallet_required() {
+  awk '
+    /^[[:space:]]*-[[:space:]]*type:/                 { inb = 0 }
+    /^[[:space:]]*id:[[:space:]]*wallet[[:space:]]*$/ { inb = 1; next }
+    inb && /^[[:space:]]*required:/ { sub(/.*required:[[:space:]]*/, ""); print; exit }
+  ' "$1"
+}
+
+if [ -z "${dotted:-}" ]; then
+  skip "no dotted tracked paths — both venues publish the same set"
+else
+  if git -C "$REPO_ROOT" rev-parse --verify -q origin/main >/dev/null 2>&1; then
+    gh_ref="origin/main"
+  else
+    gh_ref="HEAD"
+    warn "origin/main not available locally — comparing raw against HEAD, which may be ahead of what GitHub was given"
+  fi
+  gh_ct=$(git -C "$REPO_ROOT" log -1 --format=%ct "$gh_ref" 2>/dev/null || echo 0)
+  gh_age=$(( $(date +%s) - gh_ct ))
+  gh_n=0; gh_ok=0; gh_bad=0; gh_miss=0; gh_unpushed=0
+  surface=""
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    pf="$REPO_ROOT/$p"
+    [ -f "$pf" ] || continue
+    gh_n=$((gh_n+1))
+
+    # money in — section 8's document rule, at the venue that actually serves it
+    if [ -n "$wallet" ] && grep -Fqi "$wallet" "$pf" && ! grep -Fq "$POT_NOTICE" "$pf"; then
+      red "repo $p: publishes the compromised pot address with no suspension notice (GitHub serves this file at raw and blob)"
+    fi
+
+    # money out — census, compared against the pin below
+    pn=$(promise_lines "$pf" | sort -un | grep -c '^[0-9]' || true)
+    wreq=$(wallet_required "$pf"); [ -n "$wreq" ] || wreq="-"
+    if [ "$pn" -gt 0 ] || [ "$wreq" != "-" ]; then
+      surface="$surface$p $pn $wreq
+"
+    fi
+
+    # venue parity — raw serves main straight from git, so a divergence is either
+    # its CDN cache lagging a push (hence the same grace section 10 uses) or bytes
+    # we never published.
+    blob=$(tmpf cicfa_ghblob)
+    if ! git -C "$REPO_ROOT" show "$gh_ref:$p" > "$blob" 2>/dev/null; then
+      gh_unpushed=$((gh_unpushed+1)); rm -f "$blob"; continue
+    fi
+    rf=$(tmpf cicfa_ghraw)
+    rc=$(fetch_page "$RAW_BASE/$p" "$rf" 1)
+    if [ "$rc" != "200" ]; then
+      gh_miss=$((gh_miss+1))
+      warn "raw $p -> ${rc:-<none>}: GitHub is not serving a file it holds — rate limit, or the venue changed"
+    elif cmp -s "$blob" "$rf"; then
+      gh_ok=$((gh_ok+1))
+    elif [ "$gh_age" -lt "$DEPLOY_GRACE" ]; then
+      gh_bad=$((gh_bad+1))
+      warn "raw $p differs from $gh_ref, but that commit is only ${gh_age}s old — raw's cache lags a push; re-run before believing it"
+    else
+      gh_bad=$((gh_bad+1))
+      red "raw $p DIFFERS from $gh_ref (pushed $((gh_age/60))m ago) — GitHub is serving bytes this repo did not publish"
+    fi
+    rm -f "$blob" "$rf"
+  done <<EOF
+$dotted
+EOF
+
+  if [ "$gh_bad" = 0 ] && [ "$gh_miss" = 0 ]; then
+    pass "GitHub venue parity: $gh_ok of $gh_n dotted file(s) byte-identical to $gh_ref at raw"
+  else
+    warn "GitHub venue parity: $gh_ok identical, $gh_bad divergent, $gh_miss unserved, of $gh_n"
+  fi
+  [ "$gh_unpushed" -gt 0 ] && skip "$gh_unpushed dotted file(s) not yet in $gh_ref — nothing published to compare"
+
+  # the payout surface against the pin, both directions
+  drift=0; tot_p=0; tot_w=0; forms=0
+  while IFS= read -r s; do
+    [ -n "$s" ] || continue
+    sp=${s%% *}; rest=${s#* }; sn=${rest%% *}; sw=${rest#* }
+    forms=$((forms+1)); tot_p=$((tot_p+sn)); [ "$sw" = "true" ] && tot_w=$((tot_w+1))
+    want=$(echo "$PAYOUT_PIN" | grep -F "$sp " | head -1)
+    if [ -z "$want" ]; then
+      drift=1
+      warn "payout surface: $sp is NOT in the pin — something newly promises the pot or collects an address ($sn promise line(s), wallet required=$sw)"
+    else
+      wrest=${want#* }; wn=${wrest%% *}; ww=${wrest#* }
+      if [ "$sn" != "$wn" ] || [ "$sw" != "$ww" ]; then
+        drift=1
+        warn "payout surface DRIFT in $sp: promise lines $wn -> $sn, wallet required $ww -> $sw. If the board answered DEE-30 q3, update PAYOUT_PIN in this section"
+      fi
+    fi
+  done <<EOF
+$surface
+EOF
+  while IFS= read -r w; do
+    [ -n "$w" ] || continue
+    wp=${w%% *}
+    echo "$surface" | grep -Fq "$wp " || {
+      drift=1
+      warn "payout surface: pinned form $wp no longer promises the pot, or is gone — confirm that was the board's call, then update PAYOUT_PIN"
+    }
+  done <<EOF
+$PAYOUT_PIN
+EOF
+  [ "$drift" = 0 ] && pass "payout surface matches the pin: nothing newly promised, nothing quietly withdrawn"
+
+  # Said out loud every run, on purpose. This is the one line in the pass that is
+  # not a defect report: it is the shape of a decision the board is holding.
+  if [ "$forms" -gt 0 ]; then
+    warn "STANDING, board-held (DEE-30 q3): $tot_p payout promise(s) across $forms GitHub-published form(s), ETH address required in $tot_w — the pot was swept 2026-07-10 and cannot pay. Left standing deliberately: monitor, do not fix here."
+  fi
+
+  # The chooser. Two-sided, exactly like section 8's page rule: no invitation to
+  # fund, and the suspension said out loud. Scoped to the strings config.yml
+  # actually publishes — the contact-link name/url/about values — and NOT to the
+  # whole file, because the file documents the phrase 339a5cb removed from it and a
+  # whole-file grep would red-FAIL on that documentation forever. DEE-34's trap in a
+  # new costume, and the same escape: assert on the field, not the text around it.
+  cfg="$REPO_ROOT/.github/ISSUE_TEMPLATE/config.yml"
+  if [ ! -f "$cfg" ]; then
+    skip "no issue-chooser config.yml in this repo"
+  else
+    ct=$(tmpf cicfa_chooser)
+    grep -E '^[[:space:]]*(-[[:space:]]*)?(name|about|url):' "$cfg" | sed 's/^[^:]*://' > "$ct"
+    chits=$(solicit_hits "$ct")
+    grep -Fqi "fund the pot" "$ct" && chits=$(printf '%s\n%s' "$chits" "the chooser blurb invites funding the pot")
+    [ -n "$wallet" ] && grep -Fqi "$wallet" "$ct" && chits=$(printf '%s\n%s' "$chits" "the chooser blurb publishes the compromised address")
+    if [ -n "$(echo "$chits" | grep -v '^$')" ]; then
+      red "issue chooser: FUNDING SOLICITATION is published at $CHOOSER_URL:"; show "$chits"
+    else
+      pass "issue chooser: no funding solicitation in the published blurbs"
+    fi
+    if grep -Fq "$CHOOSER_NOTICE" "$ct"; then
+      pass "issue chooser: the blurb still says funding is suspended"
+    else
+      red "issue chooser: the suspension notice is GONE from the published blurb — 339a5cb undone"
+    fi
+    rm -f "$ct"
+  fi
+
+  # And the rendered form itself. Anonymous requests are redirected to a login, so
+  # its content cannot be read from here; that is reported as what it is rather than
+  # as an unreachable surface, because the redirect is how the venue tells us the
+  # form is live for signed-in readers.
+  ccode=$(curl -s -o /dev/null -m "$CURL_MAX" -w '%{http_code}' "$CHOOSER_URL" 2>/dev/null)
+  case "$ccode" in
+    301|302) skip "chooser -> $ccode login redirect: rendered for signed-in visitors only, so it is checked above from the YAML that produces it" ;;
+    200)     pass "chooser -> 200 at $CHOOSER_URL" ;;
+    404)     red  "chooser -> 404: the intake form the live page links to is gone" ;;
+    *)       warn "chooser -> ${ccode:-<none>}: could not confirm the intake form is still published" ;;
+  esac
+
+  # No silent caps, same rule as section 8.
+  skip "not checked here: the 23 non-dotted files GitHub also serves at raw/blob — section 8 checks that content and section 10 checks the Pages copy"
 fi
 
 # ── verdict ──────────────────────────────────────────────────────────────────

@@ -80,6 +80,7 @@ If the new version isn't showing after 5 minutes:
 | Assuming the *pages* are the published surface | There is no `.nojekyll` and no `_config.yml`, so Pages builds this repo with **default Jekyll: every tracked file outside a dot-directory is published** — markdown rendered to `<name>.html` *and*, for most of it, the raw source served beside it. 23 of 31 tracked files are reachable across ~35 URLs, including `scripts/healthcheck.sh` itself (`application/x-sh`). An `.html` glob covers 2 of them. That left 21 published documents — five naming the compromised pot wallet — outside the funding-suspension invariant (DEE-34). | `healthcheck.sh` §8 enumerates the surface by **Jekyll's rule** (skip dotted paths, ship the rest), not by extension, and probes both URL forms per file rather than predicting which one Jekyll serves. Every run prints what it excluded. If you add `.nojekyll`, the raw forms keep answering and the check follows — but that changes the extent of an accessioned artwork, so it is a **board decision** (DEE-33), not a cleanup. |
 | Loosening a narrow grep to stop it false-failing | The docs that *document* the mitigation quote the invitation in order to forbid it (`CLAUDE.md` §5, and §8's own pattern list). Extending §8's solicitation patterns to markdown red-FAILs both immediately, and the tempting repair — a looser pattern, or an any-of-these-will-do disclosure predicate — false-passes forever after. | Keep the literal tests literal. Normalise the *documents* onto one canonical notice sentence (`Do not send ETH to this address`, `POT_NOTICE` in the script) instead of teaching the check every phrasing. §8 applies solicitation patterns to `.html` only, on purpose, and says so where it does it. |
 | Reading a green health check as "the live site is current" | Checks 1–9 verify that the site is *up* and that the repo is *right*; until §10 nothing verified they were the same thing. A stalled or failed Pages build serves the previous commit forever, and the pass stays green through it — 200 OK, tree clean and equal to `origin/main`, §8 markers passing against bytes from before the fix. The funding suspension is exactly this shape of change, so the failure mode is "the invitation is still live and every monitor says fine". | `healthcheck.sh` §10 compares live bytes to `origin/main` bytes per verbatim-published file. If it WARNs "build probably still in flight", re-run after the deploy rather than dismissing it; if it FAILs, the venue is serving something this repo did not publish — check the Pages build before touching content. |
+| Asking what the platform publishes, but only asking one platform | Pages is not the only publisher. GitHub serves every tracked file itself at `raw.githubusercontent.com` and `/blob/main/` — **dot-directories included** — and compiles `.github/ISSUE_TEMPLATE/` into the program's live intake form at `/issues/new/choose`. So the paths §8 correctly excludes as "Jekyll skips these" are published anyway, by something else. The intake form is one of them: it promised the swept pot's ETH five times, one click from a page reading FUNDING SUSPENDED, while the monitor printed those paths as *outside the published surface* every run (DEE-42). | `healthcheck.sh` §11 covers the second venue on its own rules — raw-vs-`origin/main` parity for the dotted set, the pot-address rule, a two-sided check on the issue chooser, and a **pin** (`PAYOUT_PIN`) on the payout promises that are standing by board decision. Do not merge the two venues into one wider glob: `.claude/` and `.github/workflows/` genuinely are not published *as documents* by Jekyll. Two venues, two rules. |
 | `mktemp -t prefix` in a script CI will run | BSD-only. GNU coreutils needs trailing `X`s, so on a Linux runner mktemp fails, the caller gets an **empty path**, and whatever consumed it degrades to a warning. This kept §8's live check from running in CI for its entire life while every run still printed ✅ ALL GREEN. | Use the `tmpf` helper (full path + `XXXXXX`). More generally: when a check can't verify, decide whether that is really "unknown" or actually "broken" — §8 now FAILs if §1 already proved the site is up. |
 
 ---
@@ -94,7 +95,8 @@ Reproduces the manual checklist that has caught every past regression (DEE-14 de
 JS parses, **every configured RPC returns the balance AND is CORS-usable from the live
 origin and they all agree**, external scripts reachable (SKIPped while the page ships
 none — it dropped the QR CDN with the payment QR), issue templates present in repo +
-live, every `target="_blank"` carries `rel="noopener"`. Config is parsed straight out of
+live, every `target="_blank"` carries `rel="noopener"`, and — §11 — the second venue
+GitHub publishes itself. Config is parsed straight out of
 `index.html`, so the check can't drift from what the page ships. Exit 0 = all green,
 1 = a hard check failed. Transient blips (curl 000 / 5xx / 429) are retried before they
 count, so a one-shot network hiccup can't false-FAIL. Run it each maintenance pass:
@@ -141,6 +143,30 @@ DEE-33, and §1 already owns liveness), and a divergence within `DEPLOY_GRACE` (
 the pushed commit is a WARN, because a build in flight is not a stale deploy. Only
 200-with-different-bytes past the grace window is hard-red; that cannot be anything but
 a stale or altered deploy. Pure HTTP + git, so **CI covers it**.
+
+**§11 asks the question §§8 and 10 don't: *which* publisher?** Both of those measure
+GitHub Pages. GitHub publishes this repository a second way — raw and blob for every
+tracked file, dot-directories included, and `.github/ISSUE_TEMPLATE/` rendered into the
+live intake form at `/issues/new/choose` (a 302 to login for anonymous readers, i.e.
+served to exactly the population that can submit). Verified 2026-07-26: raw and blob
+answer 200 for `.github/ISSUE_TEMPLATE/submission.yml` while Pages correctly 404s the
+same path. §11 takes the **dotted set §8 skips** — the other 23 files are already
+checked there — and applies rules graded by the direction money moves. *Money in* is
+hard-red and is the same rule as §8: the compromised address published here without the
+notice, or the chooser blurb inviting contributions (checked against the `name`/`url`/
+`about` values only, never the whole file — `config.yml` documents the phrase `339a5cb`
+removed from it, and a whole-file grep would red-FAIL on that documentation forever).
+*Money out* is a standing WARN: `submission.yml` promises the pot four times and
+`jury_registration.yml` once, and those are left standing **deliberately** — what the
+work owes is a board question (DEE-30 q3), and no visitor loses anything by reading a
+promise to be paid. §11 pins them (`PAYOUT_PIN`: path, promise-line count, and the
+`validations.required` of the `id: wallet` input — the *field*, not the prose about it)
+and restates them every run, so the decision stays a decision instead of decaying into
+an oversight nobody remembers making. Drift off the pin in either direction is a WARN,
+not a failure: **if the board answers DEE-30 q3 and the forms are edited, update
+`PAYOUT_PIN` in the same commit.** Parity reuses §10's shape and `DEPLOY_GRACE`, since
+raw's cache lags a push the way a build does. Plain HTTP to `github.com`, so **CI covers
+it** too.
 
 **`.github/workflows/healthcheck.yml` — the scheduled monitor (cloud IP).**
 Runs the same script daily on a 06:17 UTC cron (GitHub queues scheduled jobs when
