@@ -76,6 +76,8 @@ If the new version isn't showing after 5 minutes:
 | Renaming `index.html` to `index.htm` or similar | Pages won't serve it | The file at the served path must literally be named `index.html`. |
 | Putting deploy assets in `gh-pages` branch | This repo deploys from `main`. `gh-pages` is ignored. | Use `main`. |
 | Removing `index.html` to "clean up" | The whole site 404s | Don't. |
+| Assuming `index.html` is the only page we publish | Pages serves the **whole repo** — `programs/console_vB01/index.html` is live too. A check scoped to `index.html` silently ignores it. | `healthcheck.sh` §8 globs every tracked `.html`. Keep it a glob; never re-scope a published-surface check to one filename. |
+| `mktemp -t prefix` in a script CI will run | BSD-only. GNU coreutils needs trailing `X`s, so on a Linux runner mktemp fails, the caller gets an **empty path**, and whatever consumed it degrades to a warning. This kept §8's live check from running in CI for its entire life while every run still printed ✅ ALL GREEN. | Use the `tmpf` helper (full path + `XXXXXX`). More generally: when a check can't verify, decide whether that is really "unknown" or actually "broken" — §8 now FAILs if §1 already proved the site is up. |
 
 ---
 
