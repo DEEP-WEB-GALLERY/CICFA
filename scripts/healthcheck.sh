@@ -13,7 +13,8 @@
 #   5. QR CDN reachable — only if the page still loads an external script
 #   6. GitHub issue-form templates present in repo and live
 #   7. every target="_blank" anchor carries rel="noopener"
-#   8. funding suspension holds: no solicitation, disclosure intact (DEE-30)
+#   8. funding suspension holds: no solicitation, disclosure intact (DEE-30) —
+#      on index.html *and* on every other page GitHub Pages publishes
 #   9. the regeneration interlocks that stop the invitation being re-published
 #      are still armed — local pass only, the AUTORUN pack is a separate repo
 #
@@ -334,6 +335,72 @@ else
   warn "live page fetch -> $lcode — funding-suspension invariant not verified against production"
 fi
 rm -f "$livefile"
+
+# Every OTHER page GitHub Pages publishes. The mitigation — and everything above
+# — was scoped to index.html because that is where the invitation was. But Pages
+# serves the whole repo: programs/console_vB01/index.html is live at
+# <LIVE_URL>programs/console_vB01/index.html right now, and nothing here would
+# have noticed a solicitation appearing on it. A second page is precisely where
+# one survives a cleanup of the first. Pages are found by glob, never a
+# hard-coded list, so one added later is covered the day it lands.
+#
+# Two rules per secondary page. No solicitation — same patterns, same reason.
+# And a narrower form of the disclosure rule than index.html's: a sub-page is
+# not required to carry the warning in general, but it may not *publish the
+# compromised address* without one. Naming the wallet is what turns a page into
+# somewhere a visitor can send money.
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  pages=$(git -C "$REPO_ROOT" ls-files '*.html' 2>/dev/null)
+else
+  pages=$(cd "$REPO_ROOT" && find . -name '*.html' -not -path './.git/*' 2>/dev/null | sed 's|^\./||')
+fi
+others=$(echo "$pages" | grep -v '^index\.html$' | grep -v '^$')
+if [ -z "$others" ]; then
+  skip "no secondary published pages in the repo"
+else
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    pf="$REPO_ROOT/$p"
+    [ -f "$pf" ] || continue
+    pok=1
+    phits=$(solicit_hits "$pf")
+    if [ -n "$phits" ]; then
+      pok=0
+      red "repo $p: FUNDING SOLICITATION on a published page (Pages serves this too):"; show "$phits"
+    fi
+    if [ -n "$wallet" ] && grep -Fqi "$wallet" "$pf" && ! grep -Fq "Do not send ETH to this address" "$pf"; then
+      pok=0
+      red "repo $p: publishes the compromised pot address with no suspension notice"
+    fi
+    [ "$pok" = 1 ] && pass "repo $p: no funding solicitation"
+
+    # the live copy of that same page — same two-sided logic as the main page,
+    # same convention: a fetch failure is a WARN, section 1 owns liveness.
+    pfile=$(mktemp -t cicfa_page)
+    pattempt=1
+    while :; do
+      pcode=$(curl -s -m "$CURL_MAX" -o "$pfile" -w '%{http_code}' "$LIVE_URL$p" 2>/dev/null)
+      [ "$pcode" = "200" ] && break
+      [ "$pattempt" -ge "$HTTP_RETRIES" ] && break
+      pattempt=$((pattempt+1)); sleep "$RETRY_SLEEP"
+    done
+    if [ "$pcode" = "200" ]; then
+      lphits=$(solicit_hits "$pfile")
+      if [ -n "$lphits" ]; then
+        red "live $p: FUNDING SOLICITATION IS LIVE on a secondary page:"; show "$lphits"
+      elif [ -n "$wallet" ] && grep -Fqi "$wallet" "$pfile" && ! grep -Fq "Do not send ETH to this address" "$pfile"; then
+        red "live $p: publishes the compromised pot address with no suspension notice"
+      else
+        pass "live $p: no funding solicitation"
+      fi
+    else
+      warn "live $p fetch -> $pcode — secondary page not verified against production"
+    fi
+    rm -f "$pfile"
+  done <<EOF
+$others
+EOF
+fi
 
 # ── 9. regeneration interlocks ───────────────────────────────────────────────
 # DEE-30, one level upstream of section 8. Section 8 notices the invitation once

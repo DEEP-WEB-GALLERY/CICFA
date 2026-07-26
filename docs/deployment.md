@@ -103,7 +103,12 @@ funding copy or the generator.** The bounty pool's private key is compromised an
 wallet was swept 2026-07-10, so the page must never invite anyone to send ETH to it
 again. §8 is two-sided against `index.html` *and* the live page: the solicitation must
 stay absent **and** the disclosure must stay present (silently dropping the warning is
-the same failure as re-adding the ask). §9 checks one layer upstream — that the
+the same failure as re-adding the ask). **`index.html` is not the only page we publish** —
+Pages serves the whole repo, so `programs/console_vB01/index.html` is live too. §8 globs
+every tracked `.html` and applies the no-solicitation rule to each, repo copy and live
+copy, plus a narrower disclosure rule for sub-pages: a page may not publish the
+compromised address without the suspension notice. Add a page and it is covered the day
+it lands; do not re-scope the check to a single file. §9 checks one layer upstream — that the
 interlocks stopping the page from being *regenerated* into a solicitation are still
 armed: `DWG_AUTORUN_BETA`'s `generate_bounty_site.py` refuses on its `FUNDING_SUSPENDED`
 flag while its March template still solicits, and `deploy_to_gh_pages.py` refuses on the
