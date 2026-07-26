@@ -11,7 +11,8 @@
 #      from the live origin; all usable RPCs agree on the balance; and nobody has
 #      sent new funds to the compromised pot address (DEE-30 inbound guard)
 #   5. QR CDN reachable — only if the page still loads an external script
-#   6. GitHub issue-form templates present in repo and live
+#   6. GitHub issue-form templates still present in the repo — what the live
+#      copies SAY is check 11's, which owns the venue that serves them (DEE-45)
 #   7. every target="_blank" anchor carries rel="noopener"
 #   8. funding suspension holds: no solicitation, disclosure intact (DEE-30) —
 #      on index.html, on every other page GitHub Pages publishes, and on every
@@ -23,7 +24,9 @@
 #      serving a pre-suspension page while checks 1-8 all read green
 #  11. the SECOND venue: GitHub publishes this repo itself — raw/blob for every
 #      tracked file, dotted paths included, and .github/ISSUE_TEMPLATE as the
-#      program's live intake form. Checks 8 and 10 measure Pages only (DEE-42)
+#      program's live intake form. Checks 8 and 10 measure Pages only (DEE-42).
+#      The money rules are read off the SERVED bytes here, not off the repo copy
+#      joined to them by parity — parity is what fails first (DEE-45)
 #  12. no THIRD-PARTY venue: the fork network is enumerated at run time and no
 #      fork may have GitHub Pages enabled — a fork's main predates the funding
 #      suspension, so one switch we don't own makes it live again (DEE-50)
@@ -256,12 +259,27 @@ else
 fi
 
 # ── 6. issue-form templates ──────────────────────────────────────────────────
+# DEE-45. This section used to fetch each template from RAW_BASE and assert a 200,
+# and that fetch was the oldest check in the file pointed at the second venue — it
+# had been proving these two forms were served, daily, for months, while section 8
+# printed that the same directory sat "outside the published surface". Both halves
+# were wrong in the way that matters: the fetch read a status line and threw the
+# body away. It passed green through every day submission.yml promised the swept
+# pot four times (DEE-44), because a form that exists and a form that is honest are
+# different questions and only the first was ever asked.
+#
+# That is the same defect as SELF-004 and SELF-005 — presence taken for substance —
+# written by us, in the monitor whose job is catching it. The live half now belongs
+# to section 11, which owns this venue and reads what the served bytes SAY.
+#
+# What stays here is the one assertion that needs no network and that a fetch
+# cannot make: the form is still in the repository at all. Deleted, it 404s there;
+# here it fails with a name.
 sec "6. issue-form templates"
 for tpl in jury_registration.yml submission.yml; do
   [ -f "$REPO_ROOT/.github/ISSUE_TEMPLATE/$tpl" ] && pass "repo: $tpl present" || red "repo: $tpl MISSING"
-  code=$(httpcode "$RAW_BASE/.github/ISSUE_TEMPLATE/$tpl")
-  [ "$code" = "200" ] && pass "live: $tpl -> $code" || warn "live: $tpl -> $code (may lag deploy)"
 done
+skip "live copies belong to section 11 — it reads what they say, not just that they answer (DEE-45)"
 
 # ── 7. anchor safety ─────────────────────────────────────────────────────────
 sec "7. anchor safety"
@@ -839,6 +857,7 @@ else
   gh_ct=$(git -C "$REPO_ROOT" log -1 --format=%ct "$gh_ref" 2>/dev/null || echo 0)
   gh_age=$(( $(date +%s) - gh_ct ))
   gh_n=0; gh_ok=0; gh_bad=0; gh_miss=0; gh_unpushed=0
+  srv_n=0; srv_bad=0
   surface=""
   while IFS= read -r p; do
     [ -n "$p" ] || continue
@@ -868,6 +887,41 @@ else
     fi
     rf=$(tmpf cicfa_ghraw)
     rc=$(fetch_page "$RAW_BASE/$p" "$rf" 1)
+
+    # DEE-45. What the venue SERVES, read as content rather than as a status line.
+    # Every other assertion in this section runs on the working-tree copy and is
+    # joined to the served copy only by the byte-parity test below — a chain that
+    # holds while working tree, origin/main and raw are all the same bytes. Section
+    # 2 asserts that separately, which means the money rules were being proved about
+    # a file nobody serves, on the assumption that the interesting case never
+    # happens. The window where that assumption is false is the window this monitor
+    # exists for. So the same rules are asserted here, on the bytes a submitter
+    # actually reads, and they stand up whether or not parity holds.
+    if [ "$rc" = "200" ]; then
+      srv_n=$((srv_n+1))
+      if [ -n "$wallet" ] && grep -Fqi "$wallet" "$rf" && ! grep -Fq "$POT_NOTICE" "$rf"; then
+        srv_bad=$((srv_bad+1))
+        red "raw $p: THE SERVED COPY publishes the compromised pot address with no suspension notice"
+      fi
+      sp_n=$(promise_lines "$rf" | sort -un | grep -c '^[0-9]' || true)
+      if [ "$sp_n" -gt 0 ]; then
+        srv_bad=$((srv_bad+1))
+        red "raw $p: THE SERVED COPY promises a payout from the swept pot ($sp_n line(s)) — whatever the repo copy says, this is the text a submitter is answering"
+      fi
+      # Pinned forms only: the two-sided rule, served side. Same grading as the repo
+      # half above — a missing disclosure is red, drift off the pin is a warn.
+      want_s=$(echo "$PAYOUT_PIN" | grep -F "$p " | head -1)
+      if [ -n "$want_s" ]; then
+        ws=${want_s#* }; ws=${ws#* }
+        sw_r=$(wallet_required "$rf"); [ -n "$sw_r" ] || sw_r="-"
+        if ! grep -Fq "$CHOOSER_NOTICE" "$rf"; then
+          srv_bad=$((srv_bad+1))
+          red "raw $p: THE SERVED COPY does not state that funding is suspended — the disclosure holds in the repo and not at the venue"
+        fi
+        [ "$sw_r" = "$ws" ] || warn "raw $p: THE SERVED COPY has wallet required=$sw_r, pinned $ws — the venue is handing out a different form than the pin describes"
+      fi
+    fi
+
     if [ "$rc" != "200" ]; then
       gh_miss=$((gh_miss+1))
       warn "raw $p -> ${rc:-<none>}: GitHub is not serving a file it holds — rate limit, or the venue changed"
@@ -891,6 +945,15 @@ EOF
     warn "GitHub venue parity: $gh_ok identical, $gh_bad divergent, $gh_miss unserved, of $gh_n"
   fi
   [ "$gh_unpushed" -gt 0 ] && skip "$gh_unpushed dotted file(s) not yet in $gh_ref — nothing published to compare"
+
+  # One line for the served-copy rules, and a WARN rather than silence when none of
+  # them could run: an invariant that could not be evaluated is not an invariant
+  # that held. Same escalation as section 8's live-page branch (ae5ef98).
+  if [ "$srv_n" = 0 ]; then
+    warn "served-copy content: nothing could be read from raw this pass — what the venue is actually handing out is unverified"
+  elif [ "$srv_bad" = 0 ]; then
+    pass "served-copy content: $srv_n file(s) read from raw — no pot address without the notice, no payout promised, forms match the pin"
+  fi
 
   # the payout surface against the pin, both directions
   drift=0; tot_p=0; tot_w=0; forms=0
