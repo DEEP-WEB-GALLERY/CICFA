@@ -8,7 +8,7 @@
 **LAST UPDATE:** 2026-01-XX
 **MAINTAINED BY:** @MarketDepravation
 
-**Official Interface:** [CICFA Web Interface](https://deep-web-gallery.github.io/CICFA/)
+**Official Interface:** [CICFA // BOUNTY LOGIC — cicfa.lol](https://cicfa.lol) · Operation 001 record: [archive/operation-001_moma-sym/](https://deep-web-gallery.github.io/CICFA/archive/operation-001_moma-sym/)
 
 > Source: `ONBOARDING_V0.7` (parent CICFA folder). Cleaned of encoding artifacts. Authoritative copy for the team.
 

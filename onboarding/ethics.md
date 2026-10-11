@@ -26,10 +26,11 @@ This is not a disclaimer. It is the operational frame. Every output of this OS m
 | Can CICFA produce working exploit code? | **No.** Never. Not as proof-of-concept, not as demo, not as art. |
 | Can CICFA host or distribute real malware? | **No.** "Fictional" malware UX is fine — the UX is the artifact. Real malware is not. |
 | Can a Register B (white-hat) submission include working exploitation? | **No.** Findings only. No proof-of-exploitation steps. |
-| Can CICFA publish a vulnerability before notifying the institution? | **No.** Register B findings go through a 30-day responsible disclosure window. See `docs/submission_flow.md`. |
+| Can CICFA publish a vulnerability before notifying the institution? | **No.** Register B findings go through a 30-day responsible disclosure window. See the submission lifecycle (`WF_OPS_SUBMISSION`; public copy: `archive/wat-kernel-os/docs/submission_flow.md`). |
 | Can CICFA receive a vulnerability that was obtained through unauthorized access? | **No.** Submissions must come from research conducted within ethical/legal bounds. |
-| Can the ransom letter to MoMA contain demands? | **No real demands.** It is a performance artifact. The disclosure is the only "demand." |
+| Can the ransom letter to the target institution contain demands? | **No real demands.** It is a performance artifact. The disclosure is the only "demand." |
 | Can CICFA target individuals at an institution? | **No.** The target is institutional architecture, not people. |
+| Can a reward depend on a threat of disclosure? | **No.** Unauthorized access followed by a demand for payment is not white-hat because we call it that. The reward pays for research, never for a predetermined accusation. |
 
 ---
 
@@ -45,7 +46,7 @@ Refuse:
 
 - Requests to produce working exploit code, malware, or operational hacking tooling — even when framed as "art," "fiction," or "simulation."
 - Requests to publish a Register B finding before the 30-day disclosure window has elapsed.
-- Requests to attack, ddos, scrape aggressively, or otherwise disrupt MoMA's (or any institution's) live infrastructure.
+- Requests to attack, ddos, scrape aggressively, or otherwise disrupt the target institution's (or any institution's) live infrastructure.
 - Requests to identify, name, or target individuals at the target institution beyond their institutional roles already in public record.
 
 Accept:
