@@ -2,8 +2,10 @@
 
 How the live site at `https://deep-web-gallery.github.io/CICFA/…` actually gets served.
 
-> **Since 2026-10-11 (DEC-002)** the venue root is **retired**: there is no root `index.html`, the root URL returns
-> 404 by design and a minimal `404.html` is served. The Operation 001 page lives at
+> **Since 2026-10-11 (DEC-002)** the venue root is **retired**: there is no root `index.html`. **Interim state:**
+> GitHub Pages' default Jekyll plugin `jekyll-readme-index` still renders `README.md` at the root (200); turning
+> that off needs `_config.yml` (`readme_index: enabled: false`) or `.nojekyll`, both gated (DEE-33) — pending Boris.
+> Missing paths get a minimal `404.html` with a real 404 status. The Operation 001 page lives at
 > `archive/operation-001_moma-sym/`. This repo is the **published face** of the private OS
 > `DEEP-WEB-GALLERY/cicfa-os`; see "Ownership" below before editing anything.
 
@@ -81,7 +83,8 @@ If the new version isn't showing after 5 minutes:
 | Hardcoding `localhost:8000` in a deployed file | Site loads but JS fails | Search/replace before commit. |
 | Renaming `archive/operation-001_moma-sym/index.html` to `index.htm` or similar | Pages won't serve it at the directory URL | The file at the served path must literally be named `index.html`. |
 | Putting deploy assets in `gh-pages` branch | This repo deploys from `main`. `gh-pages` is ignored. | Use `main`. |
-| Adding a root `index.html` back | The root was retired on 2026-10-11 (DEC-002); a root page re-opens a surface nobody runs | Don't. Healthcheck §1 warns on a root 200. The root 404 is by design, not a defect. |
+| Adding a root `index.html` back | The root was retired on 2026-10-11 (DEC-002); a root page re-opens a surface nobody runs | Don't. Healthcheck §1 warns on a root 200. |
+| Assuming "no `index.html`" means "root 404" | GitHub Pages enables `jekyll-readme-index` by default: with no index, `README.md` is rendered at the root. We assumed the opposite on 2026-10-11 and the live check proved us wrong. | Verify with a real GET after the build. The off switch is `_config.yml` (`readme_index: enabled: false`), gated. |
 | Assuming `index.html` is the only page we publish | Pages serves the **whole repo** — `programs/console_vB01/index.html` is live too. A check scoped to `index.html` silently ignores it. | `healthcheck.sh` §8 globs every tracked `.html`. Keep it a glob; never re-scope a published-surface check to one filename. |
 | Assuming the *pages* are the published surface | There is no `.nojekyll` and no `_config.yml`, so Pages builds this repo with **default Jekyll: every tracked file outside a dot-directory is published** — markdown rendered to `<name>.html` *and*, for most of it, the raw source served beside it. 23 of 31 tracked files are reachable across ~35 URLs, including `scripts/healthcheck.sh` itself (`application/x-sh`). An `.html` glob covers 2 of them. That left 21 published documents — five naming the compromised pot wallet — outside the funding-suspension invariant (DEE-34). | `healthcheck.sh` §8 enumerates the surface by **Jekyll's rule** (skip dotted paths, ship the rest), not by extension, and probes both URL forms per file rather than predicting which one Jekyll serves. Every run prints what it excluded. If you add `.nojekyll`, the raw forms keep answering and the check follows — but that changes the extent of an accessioned artwork, so it is a **board decision** (DEE-33), not a cleanup. |
 | Loosening a narrow grep to stop it false-failing | The docs that *document* the mitigation quote the invitation in order to forbid it (`CLAUDE.md` §5, and §8's own pattern list). Extending §8's solicitation patterns to markdown red-FAILs both immediately, and the tempting repair — a looser pattern, or an any-of-these-will-do disclosure predicate — false-passes forever after. | Keep the literal tests literal. Normalise the *documents* onto one canonical notice sentence (`Do not send ETH to this address`, `POT_NOTICE` in the script) instead of teaching the check every phrasing. §8 applies solicitation patterns to `.html` only, on purpose, and says so where it does it. |

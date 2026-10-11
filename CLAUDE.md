@@ -26,10 +26,13 @@ sensitive is ever tracked here.
 Generated files are listed in `../cicfa-os/scripts/publish.manifest`. **The manifest is the ownership
 boundary: listed = generated; unlisted = owned by this repo.**
 
-## The venue root is retired
-Since 2026-10-11 there is no root `index.html`: `https://deep-web-gallery.github.io/CICFA/` returns
-404 by design (a minimal `404.html` is served with a real 404 status). The MOMA.SYM page is served at
-`archive/operation-001_moma-sym/`. **Do not add a root page** — healthcheck §1 warns if one appears.
+## The venue root is retired — but not yet dark
+Since 2026-10-11 there is no root `index.html` (DEC-002). **Today the root still answers 200**: GitHub
+Pages' default Jekyll plugin `jekyll-readme-index` renders `README.md` as the root index (verified
+2026-10-11). Switching it off needs `_config.yml` (`readme_index: enabled: false`) or `.nojekyll` —
+both gated (accessioned extent, DEE-33); the decision is Boris's (D10 in the private pulse). Missing
+paths get `404.html` with a real 404 status. The MOMA.SYM page is served at
+`archive/operation-001_moma-sym/`. **Do not add a root `index.html`** — healthcheck §1 warns on a root 200.
 
 ## Hard rules
 - ⛔ **Do not regenerate the archived page** from the AUTORUN template or run `deploy_to_gh_pages.py`:
