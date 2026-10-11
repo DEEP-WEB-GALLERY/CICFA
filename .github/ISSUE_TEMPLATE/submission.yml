@@ -1,13 +1,14 @@
-name: Vulnerability Disclosure — Submit Finding
-description: Submit your finding to the CICFA MOMA.SYM Bounty Program. Funding is suspended — approved submissions receive CICFA credit and exhibition attribution. No cash. No crypto.
+name: "[ARCHIVED] Vulnerability Disclosure — Operation 001 (intake closed 2026-10-11)"
+description: Operation 001 is archived and this intake is closed (2026-10-11). Participation now runs through https://cicfa.lol. Kept on file as part of the record. Funding is suspended.
 title: "[DISCLOSURE] "
 labels: ["submission", "operation-001"]
 body:
   - type: markdown
     attributes:
       value: |
-        ## CICFA BOUNTY PROGRAM — OPERATION 001: MOMA.SYM
-        Submit your vulnerability disclosure below. Your submission will be reviewed by the CICFA Jury.
+        ## CICFA BOUNTY PROGRAM — OPERATION 001: MOMA.SYM — ARCHIVED
+        **This intake closed on 2026-10-11.** Operation 001 is archived as a past test; nothing submitted here is reviewed.
+        Participation now runs through https://cicfa.lol. This form is kept on file as part of the Operation 001 record.
 
         **Funding is suspended.** The pot address is compromised — its key is held by a third party
         and the wallet was swept on 2026-07-10 — so nothing can be paid out for an approved

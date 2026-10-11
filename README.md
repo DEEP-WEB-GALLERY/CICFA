@@ -11,11 +11,11 @@
 
 **Cultural Infrastructure Critical Failure Attack**
 
-`DWG-CICFA-01` &nbsp;·&nbsp; `vB.01` &nbsp;·&nbsp; `STATUS: ACTIVE`
+`DWG-CICFA-01` &nbsp;·&nbsp; `OS: MARK I` &nbsp;·&nbsp; `PLATFORM: cicfa.lol v0.1` &nbsp;·&nbsp; `OPERATION 001: ARCHIVED`
 
-[![status](https://img.shields.io/badge/OPERATION_001-MOMA.SYM-ff2d2d?style=flat-square&labelColor=0a0a0a)](https://deep-web-gallery.github.io/CICFA/)
-[![register](https://img.shields.io/badge/REGISTER-A%2BB-333?style=flat-square&labelColor=0a0a0a)](https://deep-web-gallery.github.io/CICFA/)
-[![reward](https://img.shields.io/badge/REWARD-ATTRIBUTION_ONLY-222?style=flat-square&labelColor=0a0a0a)](https://deep-web-gallery.github.io/CICFA/)
+[![platform](https://img.shields.io/badge/PLATFORM-cicfa.lol_v0.1-ffb000?style=flat-square&labelColor=0a0a0a)](https://cicfa.lol)
+[![operation](https://img.shields.io/badge/OPERATION_001-ARCHIVED-333?style=flat-square&labelColor=0a0a0a)](https://deep-web-gallery.github.io/CICFA/archive/operation-001_moma-sym/)
+[![os](https://img.shields.io/badge/OS-MARK_I-00ffcc?style=flat-square&labelColor=0a0a0a)](#-os-structure)
 [![license](https://img.shields.io/badge/LICENSE-CC_BY--NC--SA_4.0-444?style=flat-square&labelColor=0a0a0a)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 </div>
@@ -25,11 +25,40 @@
 ```
 > SYSTEM DESCRIPTION
 > ──────────────────
-> Making institutions experience the aesthetic, symbolic,
-> and procedural logic of cyber-attacks.
+> a bounty program reframed for cultural institutions.
+> institutions are treated as closed platforms, legacy software, opaque governance APIs.
+> the act of commissioning, verifying and paying for a finding is the work.
 >
-> This is not an attack.
-> This is an attack.
+> // this is not an attack. this is an attack.
+```
+
+---
+
+## `> THIS REPO IS THE PUBLISHED FACE`
+
+```
+This repo is the published face. The operating system is private.
+```
+
+The OS — context, strategy, use cases, cadence — lives in the private repo `DEEP-WEB-GALLERY/cicfa-os`
+(CICFA-OS, Mark I, built on the COMANDO Canon). Files marked `visibility: public` there are published
+here, one way, by a script. GitHub Pages serves this repo; `scripts/healthcheck.sh` guards it daily.
+
+```
+// the root URL returns 404 by design — nothing is broken.
+// the record lives at /archive/operation-001_moma-sym/ ; the program lives at cicfa.lol
+```
+
+---
+
+## `> LIVE PLATFORM`
+
+**→ https://cicfa.lol** — `CICFA // BOUNTY LOGIC` — a curated bounty exchange, built by @mnrr.
+`v0.1`: missions are broadcast, backed, claimed, curated and settled; pools settle on the Sepolia
+test network — no real money moves yet.
+
+```
+one program, two bodies: this repo is the record. the platform is the venue.
 ```
 
 ---
@@ -37,139 +66,77 @@
 ## `> WHERE TO GO`
 
 ```
-NEW HERE?              →  onboarding/             # boot sequence
-OPERATING?             →  workflows/              # runbooks
-ROLES?                 →  agents/                 # who does what
-INTERNALS / KERNEL?    →  CLAUDE.md               # OS map
-LIVE SITE?             →  https://deep-web-gallery.github.io/CICFA/
-```
-
-This repo is the **CICFA OS** — the operative system that coordinates the program. Structure: `CLAUDE.md` (kernel) + `workflows/` (W) + `agents/` (A) + `tools/` (T). See `CLAUDE.md` for the full architecture.
-
----
-
-## `> BOUNTY PROGRAM — OPERATION 001`
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  TARGET       Museum of Modern Art (MoMA), NYC              │
-│  CODENAME     MOMA.SYM                                      │
-│  VECTOR       Symbolic + Technical (white hat)              │
-│  STATUS       ████████████████░░░░  OPEN                    │
-│  DEADLINE     TBD                                           │
-│  REWARD       CICFA credit · Exhibition attribution         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Identify a vulnerability in MoMA's institutional architecture. Submit a disclosure. The act of naming it is the work.
-
-**Two registers. Both valid. They can coexist.**
-
-```
-[A] SYMBOLIC / CONCEPTUAL ──────────────────────────────────────
-    A structural contradiction. A power leak.
-    A governance exploit. A curatorial blindspot.
-    Institutional critique as vulnerability disclosure.
-
-[B] TECHNICAL / WHITE HAT ──────────────────────────────────────
-    A real opsec or security finding in MoMA's public
-    infrastructure. No exploitation. No harm.
-    Submit through CICFA — we handle responsible disclosure.
-    The act of surfacing the flaw is the work.
-```
-
-> A real CVE filed as a ransom note is both.
-
----
-
-## `> SUBMIT`
-
-```bash
-# Accepted formats
-./submit --type="written"      # Disclosure doc, breach narrative, ransom note (1-3pp)
-./submit --type="visual"       # Attack surface map, power flow, annotated org chart
-./submit --type="artifact"     # Deployable page, tool, or interface (link + screenshot)
-
-# Reward
-./reward --type="credit"       # CICFA public dashboard attribution
-./reward --type="exhibition"   # Selected submissions → physical/digital exhibition
-./reward --cash=false          # No cash. No crypto. Art-world capital only.
-```
-
-**→ [Full Brief & Submission Form](https://deep-web-gallery.github.io/CICFA/)**
-
----
-
-## `> WHO WE'RE LOOKING FOR`
-
-```
-TARGET_PROFILE {
-  security_researchers:    true,
-  net_artists:             true,
-  institutional_critics:   true,
-  curators:                true,
-  theorists:               true,
-  hacktivists:             true,
-  designers:               true,
-  philosophers:            true,
-  deep_web_researchers:    true,
-  anyone_paying_attention: true
-}
+ETHICS FIRST      →  onboarding/ethics.md                   # non-negotiable. read before anything
+PROGRAM FRAMING   →  onboarding/ONBOARDING.md               # V0.7 — what / why / lineage
+GLOSSARY          →  onboarding/glossary.md                 # registers, pot, curation, 4C
+USE CASE B0.1     →  usecases/B0.1/                         # el circuito como obra — draft, ES
+PAST TEST         →  archive/operation-001_moma-sym/        # MOMA.SYM — archived, pot compromised
+PRE-CANON OS      →  archive/wat-kernel-os/                 # the March–October 2026 runbooks, frozen
+OBJECTIVE         →  OPEN — under iteration                 # candidate formulations; one experiment decides
 ```
 
 ---
 
-## `> WHAT YOU CAN DO`
+## `> OS STRUCTURE`  <a id="-os-structure"></a>
 
-```
-MODULE_LIST [
-  ✓  expose_structural_vulnerabilities()
-  ✓  write_speculative_exploit_papers()
-  ✓  design_fake_malware_ux()
-  ✓  produce_attack_diagrams()
-  ✓  map_power_flows()
-  ✓  simulate_cascade_failures()
-  ✓  file_ironic_cve()
-  ✓  draft_ransom_note()
-]
-```
+The private OS is organized in four layers (4C). Nothing of it is edited here.
 
----
+| Layer | Holds |
+|---|---|
+| **Context** | who we are · what we know · where we might go |
+| **Connections** | the venues and people the OS talks to — this repo, the platform, the org |
+| **Capabilities** | what the OS can do — agents, workflows, skills |
+| **Cadence** | how time runs — sessions, decisions, routines, evidence |
 
-## `> SYSTEM ARCHITECTURE`
-
-```
-CICFA/
-├── HIJACK_ENVIRONMENT     # High-fidelity institutional mirrors
-│   └── pages lock, timers count down, manifestos replace curatorial text
-├── MERCADO_CENTRAL        # Speculative deep-web art marketplace
-│   └── trades: institutional vulnerabilities, curatorial contradictions
-└── BOUNTY_LOGIC           # Exploit challenge framework  [← YOU ARE HERE]
-    └── open call → submission → disclosure → archive → exhibition
-```
+Published here: `onboarding/`, `usecases/B0.1/`, `archive/`, this README, `404.html`.
+Owned here: `CLAUDE.md`, `docs/deployment.md`, `scripts/healthcheck.sh`, `.github/`, the archived artifacts.
 
 ---
 
-## `> DISCLOSURE PROTOCOL`
+## `> HOW TO PARTICIPATE`
 
 ```
-IF submission.register == "B":  # Technical / White Hat
-    cicfa.notify(institution)   # Ransom letter sent — this is the performance
-    time.sleep(days=30)         # Responsible disclosure window
-    cicfa.archive(submission)   # Finding published as artifact
-    cicfa.exhibit(submission)   # Selected for exhibition
-```
+now:   https://cicfa.lol — JACK IN with a handle and a passphrase.
+       broadcast a mission, back one, or claim one. read each mission's `rules` block before claiming.
 
-> No exploitation. No harm. The ransom: none. The publication: certain.
+here:  the GitHub issue templates were retired as intake on 2026-10-11 and are kept on file
+       as part of the Operation 001 record. they accept nothing.
+
+rule:  Register B findings (technical, white-hat) go through a 30-day responsible-disclosure
+       window on every venue. findings only. no exploitation. ever.
+```
 
 ---
 
 ## `> ETHICAL POSITION`
 
 ```
-assert work_is_about_violence  != work_is_violent
-assert stages_symbolic_systems != real_world_harm
-assert fragility_as_aesthetic  == True
+The work is about violence, not violent.
+It stages symbolic systems, not real-world harm.
+It exposes fragility as aesthetic condition.
+No exploitation has occurred or will occur.
+```
+
+---
+
+## `> STANDING WARNING — BOUNTY WALLET`
+
+```
+0x7fC76C439c200151Dde0345B09BA02764B9143Ec — COMPROMISED (DEE-30)
+// the private key is held by a third party · the pot was swept 2026-07-10
+// Funding suspended. Do not send ETH to this address.
+// rotation is a board decision; verify on-chain, do not take our word for it.
+```
+
+---
+
+## `> VERSIONS`
+
+```
+OS        CICFA-OS Mark I       — the private operating system (first instance under the canon)
+PLATFORM  cicfa.lol v0.1        — as declared by the platform's own interface
+USE CASE  B0.1                  — identifier of the first use case; documents revise with `rev:`
+PROGRAM   vB.01                 — the March-2026 release label; historical, kept in the archive
 ```
 
 ---
@@ -199,7 +166,7 @@ PARENT_PROCESSES [
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Maintained by [@MarketDepravation](https://github.com/boris-maker)**
-`DWG-CICFA-01` &nbsp;·&nbsp; [Web Interface](https://deep-web-gallery.github.io/CICFA/) &nbsp;·&nbsp; [Onboarding](./onboarding/) &nbsp;·&nbsp; [Workflows](./workflows/) &nbsp;·&nbsp; [Kernel](./CLAUDE.md)
+**Maintained by [@MarketDepravation](https://github.com/boris-maker)** · platform by @mnrr · org `DEEP-WEB-GALLERY`
+`DWG-CICFA-01` &nbsp;·&nbsp; [Platform](https://cicfa.lol) &nbsp;·&nbsp; [Record](https://deep-web-gallery.github.io/CICFA/archive/operation-001_moma-sym/) &nbsp;·&nbsp; [Onboarding](./onboarding/) &nbsp;·&nbsp; [Use case B0.1](./usecases/B0.1/)
 
 </div>

@@ -6,7 +6,7 @@
 # (DEE-14 dead cloudflare-eth RPC, DEE-23 rate-limited 1rpc.io):
 #   1. live site returns HTTP 200
 #   2. repo is clean and in sync with origin/main
-#   3. index.html present; inline <script> blocks pass `node --check`
+#   3. the archived Operation 001 page present; inline <script> blocks pass `node --check`
 #   4. every configured RPC returns the bounty-pool balance AND is CORS-usable
 #      from the live origin; all usable RPCs agree on the balance; and nobody has
 #      sent new funds to the compromised pot address (DEE-30 inbound guard)
@@ -31,7 +31,7 @@
 #      fork may have GitHub Pages enabled — a fork's main predates the funding
 #      suspension, so one switch we don't own makes it live again (DEE-50)
 #
-# Config (wallet + RPC list) is parsed straight out of index.html, so this
+# Config (wallet + RPC list) is parsed straight out of the archived page ($PAGE_REL), so this
 # script can never drift from what the page actually ships. No jq required.
 # Written for bash 3.2 (the macOS default) — no mapfile / associative arrays.
 #
@@ -59,8 +59,12 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-INDEX="$REPO_ROOT/index.html"
+# The Operation 001 page was archived on 2026-10-11 (DEC-002): it is served under archive/, and the
+# venue root is retired (404 by design). PAGE_REL is the main page every page-scoped check reads.
+PAGE_REL="archive/operation-001_moma-sym/index.html"
+INDEX="$REPO_ROOT/$PAGE_REL"
 LIVE_URL="https://deep-web-gallery.github.io/CICFA/"
+PAGE_URL="${LIVE_URL}archive/operation-001_moma-sym/"
 ORIGIN="https://deep-web-gallery.github.io"
 RAW_BASE="https://raw.githubusercontent.com/DEEP-WEB-GALLERY/CICFA/main"
 CHOOSER_URL="https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new/choose"
@@ -102,13 +106,19 @@ httpcode() {
 # GREEN. Always give mktemp a full path with X's; it behaves identically on both.
 tmpf() { mktemp "${TMPDIR:-/tmp}/$1.XXXXXX"; }
 
-[ -f "$INDEX" ] || { echo "FATAL: index.html not found at $INDEX"; exit 2; }
+[ -f "$INDEX" ] || { echo "FATAL: $PAGE_REL not found at $INDEX"; exit 2; }
 
 # ── 1. live site ─────────────────────────────────────────────────────────────
 sec "1. live site"
-code=$(httpcode "$LIVE_URL")
-if [ "$code" = "200" ]; then live_up=1; pass "GET $LIVE_URL -> $code"
-else live_up=0; red "GET $LIVE_URL -> $code (expected 200)"; fi
+code=$(httpcode "$PAGE_URL")
+if [ "$code" = "200" ]; then live_up=1; pass "GET $PAGE_URL -> $code (the archived Operation 001 page — the record)"
+else live_up=0; red "GET $PAGE_URL -> $code (expected 200)"; fi
+# The venue root was retired on 2026-10-11 (DEC-002): no root index.html, 404 by design (a custom
+# 404.html is served with a real 404 status). A 200 here means someone put a root page back.
+rcode=$(httpcode "$LIVE_URL")
+if [ "$rcode" = "404" ]; then pass "GET $LIVE_URL -> 404 (venue root retired by design, 2026-10-11)"
+elif [ "$rcode" = "200" ]; then warn "GET $LIVE_URL -> 200: a root page is back — the root was retired 2026-10-11 (DEC-002); remove it via PR"
+else warn "GET $LIVE_URL -> $rcode (expected 404)"; fi
 
 # ── 2. repo state ────────────────────────────────────────────────────────────
 sec "2. repo state"
@@ -154,7 +164,7 @@ sec "4. bounty-pool RPC chain"
 # the drainer's balance and still reported ALL GREEN. A monitor must name what it
 # is watching.
 wallet=$(grep -oE 'walletAddress:[[:space:]]*"0x[a-fA-F0-9]{40}"' "$INDEX" | head -1 | grep -oE '0x[a-fA-F0-9]{40}')
-[ -n "$wallet" ] && echo "  wallet: $wallet (from CICFA.walletAddress)" || red "could not parse walletAddress from index.html"
+[ -n "$wallet" ] && echo "  wallet: $wallet (from CICFA.walletAddress)" || red "could not parse walletAddress from $PAGE_REL"
 
 # Capture RPC URLs via command substitution (heredoc is safe inside $(...) on
 # bash 3.2) then iterate with a herestring — process substitution + heredoc is
@@ -296,7 +306,8 @@ else red "target=_blank without noopener:"; printf '        %s\n' "$missing"; fi
 # PRESENT. Silently dropping the warning is the same failure as re-adding the ask.
 #
 # It exists because the mitigation is a regeneration away from being undone.
-# DWG_AUTORUN_BETA/tools/templates/bounty_site.html — which CLAUDE.md §5 documents
+# DWG_AUTORUN_BETA/tools/templates/bounty_site.html — which the private OS documents
+# (cicfa-os: context/knowledge/2026-07-10_dee-30-pot-compromise.md)
 # as the sanctioned way to make structural changes to this page — is the March
 # original: it still carries "You are invited to arm the program", the
 # click-to-copy affordance and the `ethereum:` payment QR, and it predates every
@@ -345,8 +356,8 @@ show() { echo "$1" | while IFS= read -r h; do [ -n "$h" ] && echo "        - $h"
 
 # repo copy — deterministic, no network, so a bad commit is caught before deploy
 hits=$(solicit_hits "$INDEX")
-if [ -z "$hits" ]; then pass "repo index.html: no funding solicitation"
-else red "repo index.html: FUNDING SOLICITATION IS BACK — the pot key is compromised (DEE-30):"; show "$hits"; fi
+if [ -z "$hits" ]; then pass "repo $PAGE_REL: no funding solicitation"
+else red "repo $PAGE_REL: FUNDING SOLICITATION IS BACK — the pot key is compromised (DEE-30):"; show "$hits"; fi
 
 missing_disc=""
 while IFS= read -r p; do
@@ -356,15 +367,15 @@ while IFS= read -r p; do
 done <<EOF
 $disclose_patterns
 EOF
-if [ -z "$missing_disc" ]; then pass "repo index.html: compromise disclosure present"
-else red "repo index.html: compromise disclosure MISSING — page no longer warns visitors:"; show "$missing_disc"; fi
+if [ -z "$missing_disc" ]; then pass "repo $PAGE_REL: compromise disclosure present"
+else red "repo $PAGE_REL: compromise disclosure MISSING — page no longer warns visitors:"; show "$missing_disc"; fi
 
 # live copy — this is the surface a visitor's money actually leaves from. A fetch
 # failure is a WARN (can't verify), never a FAIL: section 1 already owns liveness.
 livefile=$(tmpf cicfa_live)
 lattempt=1
 while :; do
-  lcode=$(curl -s -m "$CURL_MAX" -o "$livefile" -w '%{http_code}' "$LIVE_URL" 2>/dev/null)
+  lcode=$(curl -s -m "$CURL_MAX" -o "$livefile" -w '%{http_code}' "$PAGE_URL" 2>/dev/null)
   [ "$lcode" = "200" ] && break
   [ "$lattempt" -ge "$HTTP_RETRIES" ] && break
   lattempt=$((lattempt+1)); sleep "$RETRY_SLEEP"
@@ -452,7 +463,7 @@ fetch_page() {
 # required to carry the warning in general, but it may not *publish the
 # compromised address* without one. Naming the wallet is what turns a page into
 # somewhere a visitor can send money.
-others=$(echo "$published" | grep '\.html$' | grep -v '^index\.html$' || true)
+others=$(echo "$published" | grep '\.html$' | grep -v "^${PAGE_REL}\$" || true)
 if [ -z "$others" ]; then
   skip "no secondary published pages in the repo"
 else
@@ -505,7 +516,7 @@ fi
 #
 # The solicitation patterns are deliberately NOT applied to these files, and that
 # is a stated boundary, not an oversight. Two published documents quote the
-# invitation in the course of forbidding it — CLAUDE.md §5's "⛔ STOP" warning, and
+# invitation in the course of forbidding it — the private OS's "⛔" warning (cicfa-os), and
 # this script's own pattern list — so extending the patterns here red-FAILs both on
 # day one, and loosening them to compensate is the exact failure mode the pattern
 # comment above warns against: prose gives no syntactic fingerprint to tell a
@@ -891,7 +902,7 @@ sec "11. second venue: the GitHub-published set (DEE-42)"
 # Fields: <path> <payout-promise lines> <wallet field required, or ->.
 # submission.yml 0 false — DEE-44 struck four promises and made the wallet optional.
 # jury_registration.yml 0 true — one promise struck; the juror wallet STAYS required
-# because the wallet is the vote (EIP-191, docs/jury_protocol.md:12/18). What was
+# because the wallet is the vote (EIP-191, archive/wat-kernel-os/docs/jury_protocol.md:12/18). What was
 # missing there was disclosure, not optionality, and the form now states it before
 # the field. If the board answers DEE-30 and these forms are edited again, update
 # this pin in the same commit; a stale pin turns the drift warning into noise, which

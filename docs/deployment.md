@@ -1,6 +1,11 @@
 # Deployment
 
-How the live site at `https://deep-web-gallery.github.io/CICFA/` actually gets served.
+How the live site at `https://deep-web-gallery.github.io/CICFA/…` actually gets served.
+
+> **Since 2026-10-11 (DEC-002)** the venue root is **retired**: there is no root `index.html`, the root URL returns
+> 404 by design and a minimal `404.html` is served. The Operation 001 page lives at
+> `archive/operation-001_moma-sym/`. This repo is the **published face** of the private OS
+> `DEEP-WEB-GALLERY/cicfa-os`; see "Ownership" below before editing anything.
 
 ---
 
@@ -24,7 +29,8 @@ gh api repos/DEEP-WEB-GALLERY/CICFA/pages
 
 What this means concretely:
 - Anything at the repo root on `main` is served at the site root.
-- `index.html` → `https://deep-web-gallery.github.io/CICFA/`
+- `archive/operation-001_moma-sym/index.html` → `https://deep-web-gallery.github.io/CICFA/archive/operation-001_moma-sym/` (the Operation 001 page — the record)
+- `404.html` → served for every missing path, including the root, with a real 404 status
 - `programs/console_vB01/index.html` → `https://deep-web-gallery.github.io/CICFA/programs/console_vB01/`
 - Pushing a commit triggers GitHub Pages to rebuild. No workflow file exists. Don't add one unless we explicitly move to Actions-based deploy.
 
@@ -42,7 +48,7 @@ git add index.html
 git commit -m "<scope>: <what changed>"
 git push origin main
 # 3. wait ~1-2 minutes
-# 4. open https://deep-web-gallery.github.io/CICFA/ in an incognito tab
+# 4. open https://deep-web-gallery.github.io/CICFA/archive/operation-001_moma-sym/ in an incognito tab
 #    (cache-bust important — old version often lingers in the regular tab)
 ```
 
@@ -54,7 +60,7 @@ For structural changes coming from the AUTORUN generator pipeline, see `tools/RE
 
 After a push, before declaring it done:
 
-1. Open `https://deep-web-gallery.github.io/CICFA/` in an incognito / cache-cleared session.
+1. Open `https://deep-web-gallery.github.io/CICFA/archive/operation-001_moma-sym/` in an incognito / cache-cleared session.
 2. View source — confirm the change is in the served HTML, not just your local copy.
 3. If the change touches the countdown or wallet balance: wait for the JSON-RPC call to complete (~3–5s), confirm the on-chain data renders.
 4. If the change touches a subpath (e.g. `programs/console_vB01/`): hit the subpath directly.
@@ -73,9 +79,9 @@ If the new version isn't showing after 5 minutes:
 | Editing `index.html` on a feature branch | Pages only serves `main`. Branch changes are invisible. | Merge to `main` or push direct to `main`. |
 | Breaking the JSON-RPC URL for `eth_getBalance` | Bounty pool shows `···` permanently | `CICFA.rpcUrls` holds a fallback list (publicnode / drpc / blastapi / blxrbdn). Test each with a `curl` `eth_getBalance` POST; drop dead ones. Don't re-add `cloudflare-eth.com` (public gateway retired, `-32603`) or `1rpc.io` (rate-limited from shared IPs, `-32005` — DEE-23). Easiest check: run `scripts/healthcheck.sh` (see Health monitoring below), which probes every configured RPC for balance + CORS from the live origin. |
 | Hardcoding `localhost:8000` in a deployed file | Site loads but JS fails | Search/replace before commit. |
-| Renaming `index.html` to `index.htm` or similar | Pages won't serve it | The file at the served path must literally be named `index.html`. |
+| Renaming `archive/operation-001_moma-sym/index.html` to `index.htm` or similar | Pages won't serve it at the directory URL | The file at the served path must literally be named `index.html`. |
 | Putting deploy assets in `gh-pages` branch | This repo deploys from `main`. `gh-pages` is ignored. | Use `main`. |
-| Removing `index.html` to "clean up" | The whole site 404s | Don't. |
+| Adding a root `index.html` back | The root was retired on 2026-10-11 (DEC-002); a root page re-opens a surface nobody runs | Don't. Healthcheck §1 warns on a root 200. The root 404 is by design, not a defect. |
 | Assuming `index.html` is the only page we publish | Pages serves the **whole repo** — `programs/console_vB01/index.html` is live too. A check scoped to `index.html` silently ignores it. | `healthcheck.sh` §8 globs every tracked `.html`. Keep it a glob; never re-scope a published-surface check to one filename. |
 | Assuming the *pages* are the published surface | There is no `.nojekyll` and no `_config.yml`, so Pages builds this repo with **default Jekyll: every tracked file outside a dot-directory is published** — markdown rendered to `<name>.html` *and*, for most of it, the raw source served beside it. 23 of 31 tracked files are reachable across ~35 URLs, including `scripts/healthcheck.sh` itself (`application/x-sh`). An `.html` glob covers 2 of them. That left 21 published documents — five naming the compromised pot wallet — outside the funding-suspension invariant (DEE-34). | `healthcheck.sh` §8 enumerates the surface by **Jekyll's rule** (skip dotted paths, ship the rest), not by extension, and probes both URL forms per file rather than predicting which one Jekyll serves. Every run prints what it excluded. If you add `.nojekyll`, the raw forms keep answering and the check follows — but that changes the extent of an accessioned artwork, so it is a **board decision** (DEE-33), not a cleanup. |
 | Loosening a narrow grep to stop it false-failing | The docs that *document* the mitigation quote the invitation in order to forbid it (`CLAUDE.md` §5, and §8's own pattern list). Extending §8's solicitation patterns to markdown red-FAILs both immediately, and the tempting repair — a looser pattern, or an any-of-these-will-do disclosure predicate — false-passes forever after. | Keep the literal tests literal. Normalise the *documents* onto one canonical notice sentence (`Do not send ETH to this address`, `POT_NOTICE` in the script) instead of teaching the check every phrasing. §8 applies solicitation patterns to `.html` only, on purpose, and says so where it does it. |
@@ -247,4 +253,18 @@ Anything that fits the Pages constraints:
 
 - Test locally before pushing
 - Don't push half-finished work
-- If you must experiment on the deployed surface, use `programs/<scratchpad>/` so the live `index.html` stays intact
+- If you must experiment on the deployed surface, use `programs/<scratchpad>/` so the archived page stays intact
+
+---
+
+## Ownership — three kinds of file (2026-10-11)
+
+| Class | Files | Rule |
+|---|---|---|
+| **public-owned, live** | `CLAUDE.md`, `.github/**`, `scripts/healthcheck.sh`, this file, `.gitignore`, `archive/wat-kernel-os/README.md` | edit here on a branch + PR; healthcheck green before merge |
+| **public-owned, frozen** | `archive/operation-001_moma-sym/{index.html, OPERATION_001.md, workflows/*}`, `programs/console_vB01/`, `archive/wat-kernel-os/**` | accessioned artifacts; changes are gated by Boris |
+| **private-owned, generated** | `README.md`, `404.html`, `onboarding/*`, `archive/README.md`, `archive/operation-001_moma-sym/README.md`, `usecases/**` | **never hand-edit** — overwritten on the next publish from `cicfa-os` (`scripts/publish-public.sh`, manifest `scripts/publish.manifest`) |
+
+**Never hand-edit a generated file in this repo: it is overwritten on the next publish. Make the change in cicfa-os and run `scripts/publish-public.sh`.** **The manifest is the ownership boundary: listed = generated; unlisted = owned by this repo.** The publisher records what it published (sha256 per file) and refuses to overwrite a public copy that was edited by hand (drift) until the change is ported back.
+
+Rollback reference for the 2026-10-11 migration: tag `pre-canon-2026-10-11` = `c1a2955`.

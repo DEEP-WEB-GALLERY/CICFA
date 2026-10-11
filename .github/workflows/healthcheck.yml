@@ -2,9 +2,9 @@
 #
 # Runs scripts/healthcheck.sh on a schedule so the site and its static
 # dependencies are checked without waiting for a human maintenance pass:
-#   - live site returns 200
+#   - the archived Operation 001 page returns 200; the venue root returns 404 by design (2026-10-11)
 #   - inline JS still parses
-#   - QR CDN reachable
+#   - external scripts (none since 2026-07-24; §5 skips)
 #   - GitHub issue-form templates present in repo AND live (jury / submission intake)
 #   - every target="_blank" anchor carries rel="noopener"
 #   - no fork of this repository has GitHub Pages enabled (§12)

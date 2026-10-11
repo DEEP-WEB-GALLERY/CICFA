@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MOMA.SYM — CICFA Bounty Program</title>
-  <meta name="description" content="CICFA Operation 001: decentralized bug bounty targeting MoMA's institutional architecture. Funding suspended — the pot address is compromised. Take the challenge.">
+  <title>MOMA.SYM — CICFA Operation 001 — ARCHIVED</title>
+  <meta name="description" content="CICFA Operation 001 — archived past test (2026-03 → 2026-07). A decentralized bug bounty that targeted MoMA's institutional architecture; no jury seated, no submissions. Funding suspended — the pot address is compromised.">
   <meta name="author" content="@MarketDepravation">
   <style>
     /* ── TOKENS ──────────────────────────────────────────────── */
@@ -991,7 +991,7 @@
 <div id="breach-modal">
   <div class="breach-word">BREACH</div>
   <div class="breach-sub">
-    OPERATION 001 ACTIVE // <strong>TARGET ACQUIRED</strong><br>
+    OPERATION 001 ARCHIVED // <strong>RECORD ONLY</strong><br>
     MOMA.SYM — CULTURAL INFRASTRUCTURE COMPROMISED
   </div>
   <button class="breach-enter" onclick="closeBreach()">[ ENTER PROGRAM ]</button>
@@ -1013,12 +1013,17 @@
   <div class="sys-header">
     <span>CICFA // BOUNTY PROGRAM // OPERATION: 001</span>
     <span class="right">
-      <span class="status-badge">ACTIVE</span>
+      <span class="status-badge">ARCHIVED</span>
       &nbsp; DWG-CICFA-01
     </span>
   </div>
 
   <!-- HERO -->
+  <div class="archive-banner" role="note" style="border:1px solid #ff2d2d; border-left-width:6px; background:#120606; color:#e8e8e8; padding:12px 16px; margin:0 0 18px; font-family:inherit; font-size:13px; line-height:1.55;">
+    <div style="color:#ff2d2d; letter-spacing:.08em;">OPERATION 001 // MOMA.SYM &mdash; ARCHIVED &middot; PAST TEST &middot; 2026-03-17 &rarr; 2026-07-26</div>
+    <div style="color:#8a8a8a;">// no jury seated. no submissions. pot compromised 2026-07-10 (DEE-30). the page stays published as the record.</div>
+    <div style="color:#8a8a8a;">// the program continues at <a href="https://cicfa.lol" rel="noopener" style="color:#00ffcc;">cicfa.lol</a> &mdash; nothing on this page accepts findings or money any more.</div>
+  </div>
   <div class="hero">
     <h1 data-text="MOMA.SYM" id="hero-h1">MOMA.SYM</h1>
     <div class="hero-sub">
@@ -1028,7 +1033,7 @@
     </div>
     <div class="target-pill">
       <span class="target-dot"></span>
-      BREACH WINDOW OPEN &nbsp;//&nbsp; MoMA SELECTED
+      BREACH WINDOW CLOSED &nbsp;//&nbsp; PAST TEST &nbsp;//&nbsp; RECORD
     </div>
   </div>
 
@@ -1056,7 +1061,7 @@
   <!-- FORK CTA — the psychological split -->
   <div class="fork-cta">
     <a href="#fund" class="fork-btn fork-btn-fund">⊕ Funding Suspended — Why</a>
-    <a href="#hunt" class="fork-btn fork-btn-hunt">⊗ Take the Challenge</a>
+    <a href="#hunt" class="fork-btn fork-btn-hunt">⊗ Read the Record</a>
     <div class="fork-divider">choose your role</div>
   </div>
 
@@ -1133,7 +1138,7 @@
        HUNTER SECTION
   ══════════════════════════════════════════════════════════ -->
   <div id="hunt">
-    <h2 class="section-label">⊗ Take the Challenge</h2>
+    <h2 class="section-label">⊗ The Challenge — archived</h2>
 
     <div class="hunt-block">
       <p class="hunt-intro">
@@ -1243,11 +1248,11 @@
           Once registered, your vote on submissions will be signed with your wallet
           and recorded on-chain — provably yours, provably permanent.
         </p>
-        <a href="https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=jury_registration.yml" class="wallet-btn" style="display:inline-block; color:var(--accent2); border-color:#1a3a2a;">
-          [ Register as Juror → ]
+        <a href="https://cicfa.lol" rel="noopener" class="wallet-btn" style="display:inline-block; color:var(--accent2); border-color:#1a3a2a;">
+          [ Registration closed 2026-10-11 — no jury was ever seated → cicfa.lol ]
         </a>
         <div style="font-size:10px; color:#333; margin-top:0.75rem; letter-spacing:0.1em;">
-          SEATS REMAINING: 5
+          SEATS FILLED: 0/5 — NEVER SEATED — ARCHIVED
           &nbsp;//&nbsp; FIRST COME, FIRST SEATED
           &nbsp;//&nbsp; ETH WALLET REQUIRED
         </div>
@@ -1293,8 +1298,8 @@
       </div>
 
       <!-- SUBMIT CTA -->
-      <a href="https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=submission.yml" class="submit-cta">
-        Submit Vulnerability Disclosure
+      <a href="https://cicfa.lol" rel="noopener" class="submit-cta">
+        Intake closed 2026-10-11 — the program continues at cicfa.lol
       </a>
     </div>
   </div>
@@ -1328,7 +1333,7 @@
     <hr class="footer-rule">
 
     <p>
-      CICFA &mdash; <a href="https://deep-web-gallery.github.io/CICFA/">https://deep-web-gallery.github.io/CICFA/</a>
+      CICFA &mdash; <a href="./">archive/operation-001_moma-sym/</a> &mdash; the program continues at <a href="https://cicfa.lol" rel="noopener">cicfa.lol</a>
       &mdash; @MarketDepravation &mdash; DWG-CICFA-01
     </p>
   </footer>
@@ -1349,9 +1354,9 @@ const CICFA = {
   rpcUrls:         ["https://ethereum-rpc.publicnode.com", "https://eth.drpc.org", "https://eth-mainnet.public.blastapi.io", "https://eth.rpc.blxrbdn.com"],
   targetAmountEth: 1.0,
   deadlineIso:     "",
-  submissionUrl:   "https://github.com/DEEP-WEB-GALLERY/CICFA/issues/new?template=submission.yml",
-  bootLines:       ["CICFA OS v2.1.4 \u2014 booting...", "initializing exploit_surface_scanner...", "loading institutional_memory_core...", "target_lock: MUSEUM OF MODERN ART [CONFIRMED]", "operation_id: 001 // MOMA.SYM", "bounty_pool: FUNDING SUSPENDED \u2014 key compromised, swept 2026-07-10", "jury_status: NOT SEATED \u2014 0/5 REGISTERED", "status: BREACH WINDOW OPEN", "WARNING: INSTITUTIONAL ARCHITECTURE UNSTABLE", "connecting to bounty_relay_network...", "CICFA SYSTEM ONLINE."],
-  alertText:       "⚠ WARNING: INSTITUTIONAL ARCHITECTURE COMPROMISED // BREACH WINDOW: ACTIVE // OPERATION 001 IN PROGRESS // TARGET: MUSEUM OF MODERN ART // REGISTER A+B OPEN // SUBMIT YOUR FINDINGS // BOUNTY POOL: FUNDING SUSPENDED — POT ADDRESS COMPROMISED //",
+  submissionUrl:   "https://cicfa.lol",  // intake closed 2026-10-11 — the program continues on the platform
+  bootLines:       ["CICFA OS v2.1.4 \u2014 booting...", "initializing exploit_surface_scanner...", "loading institutional_memory_core...", "target_lock: MUSEUM OF MODERN ART [CONFIRMED]", "operation_id: 001 // MOMA.SYM", "bounty_pool: FUNDING SUSPENDED \u2014 key compromised, swept 2026-07-10", "jury_status: NOT SEATED \u2014 0/5 REGISTERED", "status: ARCHIVED \u2014 PAST TEST 2026-03 \u2192 2026-07", "WARNING: INSTITUTIONAL ARCHITECTURE UNSTABLE", "connecting to bounty_relay_network...", "CICFA SYSTEM ONLINE."],
+  alertText:       "⚠ OPERATION 001 // MOMA.SYM // ARCHIVED — PAST TEST // JURY NEVER SEATED // SUBMISSIONS: 0 // POT COMPROMISED — FUNDING SUSPENDED // THE PROGRAM CONTINUES AT CICFA.LOL //",
 };
 </script>
 

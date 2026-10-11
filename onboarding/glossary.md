@@ -1,6 +1,7 @@
 # Glossary
 
-Terms you'll see across this repo.
+Terms you'll see across the CICFA repositories. Revised 2026-10-11 for the two-repo model; entries
+that describe the March-2026 program are kept and marked as such.
 
 ---
 
@@ -10,19 +11,23 @@ Terms you'll see across this repo.
 
 ## CICFA OS
 
-The contents of this repo (`CICFA_PUBLIC/`). The operative system that coordinates CICFA. The live site is one of its outputs.
+The operating system that coordinates the program — a private repo (`DEEP-WEB-GALLERY/cicfa-os`, **CICFA-OS Mark I**, built on the COMANDO Canon). The public repo `DEEP-WEB-GALLERY/CICFA` is its **published face**: the GitHub Pages archive, the record, and the health monitor. Generated files there are never edited by hand.
+
+## CICFA Comander
+
+The orchestration agent of the OS — a role any sufficiently-capable model assumes in the private repo. Canon spelling, one "m". It orchestrates; the principal decides.
 
 ## DWG
 
-**Deep Web Gallery.** The parent org. CICFA is one of DWG's programs. See `SOUL/CLAUDE.md` for org identity.
+**Deep Web Gallery.** The parent org. CICFA is one of DWG's programs. The org identity lives in DWG's own repository (SOUL).
 
 ## DWG-CICFA-01
 
-The program code for CICFA. Used in metadata, status bars, and signage across the OS.
+The program code for CICFA. Used in metadata, status bars, and signage.
 
 ## vB.01
 
-Current version of the CICFA program. "B" denotes the public/beta cycle.
+The label of the March-2026 program release ("B" for the public/beta cycle). Historical: it appears in the archived artifacts and is not continued. The OS is versioned by **Mark**; the platform by its own number; use cases by their identifier.
 
 ## #W3SP / #UHP / #DCP
 
@@ -35,17 +40,33 @@ CICFA sits in #W3SP's adjacent zone — both critique ultra-liberal market logic
 
 ---
 
+## cicfa.lol
+
+The program's live venue — `CICFA // BOUNTY LOGIC`, a "curated bounty exchange" (v0.1 as declared by its interface), built by Manu. Missions are broadcast, backed, claimed, curated and settled there. A separate codebase from the OS.
+
+## Mission
+
+A unit of work on cicfa.lol: `demand` or `offer`, with `objective / brief / rules`, a pool, backers, claims, curation verdicts and a settlement.
+
 ## Operation
 
-A discrete CICFA campaign targeting one institution. Has a code (`OPERATION 001`), a codename (`MOMA.SYM`), a deadline, a jury, and an archive entry.
+A discrete CICFA campaign of the March-2026 design, targeting one institution, with a code (`OPERATION 001`), a codename (`MOMA.SYM`), a deadline, a jury, and an archive entry.
 
 ## Operation 001 / MOMA.SYM
 
-The first operation. Target: Museum of Modern Art, NYC. Status: Active. See `OPERATION_001.md`.
+The first and only operation. Target: Museum of Modern Art, NYC. **Status: archived as a past test (2026-10-11).** No jury was seated, no submission was received, the pot was compromised. Record: `archive/operation-001_moma-sym/`.
 
 ## Target
 
-The institution under critique for a given operation. Operation 001 target = MoMA.
+The institution under critique for a given operation. Operation 001 target = MoMA. **No target is named for anything current.**
+
+## UseCase B0.1
+
+The investigation of the first complete performance — the bounty circuit (commission → execution → evidence → evaluation → distribution) as the artwork. `B0.1` is the identifier given by the principal; it does not inherit from vB.01. Public rendering: `usecases/B0.1/`.
+
+## Ensayo 0
+
+The rehearsal designed to test the circuit end to end on cicfa.lol without a real institution or real money. See `usecases/B0.1/ensayo-0.md`.
 
 ---
 
@@ -55,7 +76,7 @@ A vulnerability in the *institutional architecture* itself. Governance contradic
 
 ## Register B — Technical / White Hat
 
-A real opsec or security finding in the target's public digital infrastructure. **Findings only — no exploitation, no proof-of-attack.** CICFA handles responsible disclosure: 30-day window before publication, ransom letter to institution is part of the performance.
+A real opsec or security finding in the target's public digital infrastructure. **Findings only — no exploitation, no proof-of-attack.** CICFA handles responsible disclosure: 30-day window before publication; the letter to the institution is part of the performance.
 
 ## Dual register
 
@@ -65,7 +86,11 @@ A submission that combines A + B. Often the strongest — a technical finding in
 
 ## Jury
 
-5-seat panel that votes on submissions. Self-assembles from first volunteers via `.github/ISSUE_TEMPLATE/jury_registration.yml`. Simple majority. Votes are wallet-signed (EIP-191), recorded on-chain. See `docs/jury_protocol.md`.
+The March-2026 design: a 5-seat panel, first-come-first-seated, wallet-signed votes (EIP-191), simple majority. **It was never seated.** The design is kept as the reference for independent human review (`archive/wat-kernel-os/docs/jury_protocol.md`).
+
+## Curation
+
+What cicfa.lol calls its review: verdicts issued under the heading `CICFA CURATION`, today by language models. Whether and how humans rule next to them is an open question of B0.1.
 
 ## Disclosure
 
@@ -73,74 +98,83 @@ The act of naming a vulnerability — written, visual, or hosted. The disclosure
 
 ## Ransom letter
 
-A styled letter sent to the target institution after a Register B finding is validated. It is a performance artifact, not a demand. Generated by `generate_ransom_letter.py` (in `DWG_AUTORUN_BETA`).
+A styled letter sent to the target institution after a Register B finding is validated. A performance artifact, not a demand. Its generator lives in the frozen AUTORUN pipeline.
 
 ## Responsible disclosure window
 
-The 30-day period between notifying the institution (via ransom letter) and publishing the finding in the archive.
+The 30-day period between notifying the institution and publishing the finding in the archive.
 
 ## The archive is the work
 
-Operative principle: the long-term value of CICFA is the archive of disclosures it produces, not any single operation.
+Operative principle: the long-term value of CICFA is the archive of disclosures and circuits it produces, not any single operation.
 
 ---
 
 ## Bounty pool / pot
 
-ETH held in the bounty wallet (`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`). Funded by contributors. Transferred to the winning submitter's wallet on jury approval. Live balance is displayed on `index.html` via JSON-RPC `eth_getBalance`.
+ETH held in the Operation 001 bounty wallet (`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`), funded by contributors, to be transferred to a winning submitter on jury approval — as designed.
 
-> ⚠ **Current state (2026-07-24): the pot is empty and funding is suspended.** The
-> wallet's private key is held by a third party. The only contribution the pot ever
-> received — Ξ0.000662, sent 2026-03-19 — was swept out on 2026-07-10, along with 76
-> other wallets drained by the same address. What remains is Ξ0.000021 of gas dust.
-> The description above is the program as designed; it is not what the pot can do
-> today. Nothing can be paid out of this address, and nothing should be sent to it.
-> **Do not send ETH to this address.** Tracked as DEE-30; whether the pot is rotated,
-> left suspended or retired is an open board decision.
+> ⚠ **The pot is compromised and funding is suspended.** The wallet's private key is held by a
+> third party. The only contribution the pot ever received — Ξ0.000662, sent 2026-03-19 — was
+> swept out on 2026-07-10, along with 76 other wallets drained by the same address. What remains
+> is gas dust. Nothing can be paid out of this address, and nothing should be sent to it.
+> **Do not send ETH to this address.** Tracked as DEE-30; whether the pot is rotated, left
+> suspended or retired is an open board decision.
 
 ## Bounty wallet
 
-`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`. Don't change without explicit instruction — and note it is **compromised** (see above): don't present it as fundable either. **Do not send ETH to this address.** Rotation requires a key the gallery holds, which makes it a board decision rather than a config change.
+`0x7fC76C439c200151Dde0345B09BA02764B9143Ec`. **Compromised** (see above). Not fundable; not to be substituted on anyone's own authority. **Do not send ETH to this address.** Rotation requires a key the gallery holds, which makes it a board decision rather than a config change.
+
+## Pool (cicfa.lol)
+
+The per-mission ETH amount shown on the platform, fed by named backers and settled, today, on the Sepolia test network. The custody mechanism behind it is not known from outside.
 
 ---
 
-## Harness / meta-harness / WAT
+## 4C
 
-The architecture of this OS:
-- **Meta-harness** = `CLAUDE.md` at root. The kernel. Always loaded.
-- **Harness** = a loadable module of context (a `SKILL.md`, a workflow doc, a role).
-- **WAT** = Workflows / Agents / Tools — the three operational subsystems.
+The structure of the OS: **Context** (who we are, what we know) · **Connections** (live data and integrations) · **Capabilities** (agents, workflows, skills) · **Cadence** (pulse, decisions, routines, runs, evidence).
 
-See `CLAUDE.md` for the full mapping.
+## WAT
+
+Workflows / Agents / Tools — the vocabulary inside 4C. Cards are named `WF_*`, `AG_*`, `TL_*` with an AREA token (CORE / OPS / LAB / PLAT / ARCH).
 
 ## Skill
 
-A `.claude/skills/<name>/SKILL.md` file. A harness that loads progressively when its description matches the current task.
+A `.claude/skills/<name>/SKILL.md` file — a loadable module of context the runtime discovers by description.
 
 ## Agent (capital-A)
 
-A subagent with its own context window — defined in `.claude/agents/<name>.md`, invoked via the `Agent` tool. Mirrors a human role in `agents/`.
+A subagent with its own context window, defined by a pointer in `.claude/agents/<name>.md` whose canonical card lives in `capabilities/agents/`.
 
 ## Workflow
 
-A markdown runbook in `workflows/`. Numbered, executable step-by-step by a human or agent operator.
+A `WF_*` card: trigger, inputs, steps with who does each, outputs, definition of done, failure taxonomy.
+
+## Publish
+
+The one-way flow that copies listed files from the private OS to the public repo. The manifest is the ownership boundary; listed files are generated.
 
 ---
 
 ## Mercado Central
 
-A planned CICFA module — speculative art marketplace with deep-web aesthetics, trading in institutional vulnerabilities. Not yet built. See `onboarding/ONBOARDING.md` §2.
+The speculative marketplace module imagined in the program framing — deep-web aesthetics, trading in institutional vulnerabilities. **cicfa.lol is, in effect, this module** in its first working form.
 
 ## Hijack Environment
 
-A planned CICFA module — high-fidelity mirror sites that destabilize institutional narratives. Not yet built. See `onboarding/ONBOARDING.md` §1.
+A planned CICFA module — high-fidelity mirror sites that destabilize institutional narratives. Not built.
 
 ---
 
 ## DWG_AUTORUN_BETA
 
-Sibling private repo at `/Users/boris/Documents/DWG/DWG_AUTORUN_BETA/`. Holds the generators (`generate_bounty_site.py`, `generate_open_call.py`, etc.) and Jinja templates. The OS calls these tools but doesn't duplicate them.
+A private DWG repo holding the March-2026 generators and templates. **Frozen**: regenerating the operation page from it would re-publish the funding invitation. The OS references it; it never runs it.
 
 ## SOUL
 
-Sibling private folder at `/Users/boris/Documents/DWG/SOUL/`. Holds the canonical DWG org identity and aesthetic rules. Load `SOUL/CLAUDE.md` before any aesthetic decision.
+DWG's private identity repo. The canonical org identity and aesthetic rules. Loaded before any aesthetic decision; never paraphrased from memory.
+
+## DEE-xx
+
+Issue identifiers of the DWG agent tracker where the pot's security decisions (DEE-30, DEE-33) and the venue's maintenance history live. Read-only from the OS.

@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: CICFA Bounty Program
-    url: https://deep-web-gallery.github.io/CICFA/
+    url: https://deep-web-gallery.github.io/CICFA/archive/operation-001_moma-sym/
     # "fund the pot" removed 2026-07-24 (DEE-30): the pot's key is compromised and
     # the wallet was swept on 2026-07-10. This blurb is public on the issue-chooser
     # page, so it was still soliciting contributions after the live page stopped.
-    about: View the live bounty program or learn about the challenge. Funding is suspended — the pot address is compromised.
+    about: Operation 001 is archived (2026-10-11); intake here is closed — the program continues at https://cicfa.lol. Funding is suspended — the pot address is compromised.
