@@ -15,7 +15,7 @@ The live page moved on 2026-10-11.
 
 | Was | Is |
 |---|---|
-| `https://deep-web-gallery.github.io/CICFA/` (root) | **404 by design.** The root is retired; a minimal `404.html` points here. |
+| `https://deep-web-gallery.github.io/CICFA/` (root) | **No program page.** The root is retired (decided 2026-10-11); until the Jekyll readme-index is switched off (mechanism pending the board), GitHub Pages renders the repository README there. Missing paths get a minimal `404.html` that points here. |
 | `/index.html` | `/archive/operation-001_moma-sym/` — the MOMA.SYM page, still served, status-edited, labelled as record |
 | `/OPERATION_001.md` | `/archive/operation-001_moma-sym/OPERATION_001.md` |
 | `/workflows/03a_operation_001.md`, `/workflows/03c_operation_001_golive.md` | `/archive/operation-001_moma-sym/workflows/` (frozen runbooks) |

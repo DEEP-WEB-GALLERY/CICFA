@@ -24,8 +24,9 @@ cadence — is a private repo (`DEEP-WEB-GALLERY/cicfa-os`, CICFA-OS Mark I) who
 published here one way. Nothing under `onboarding/`, `usecases/` or `archive/*/README.md` is edited
 here by hand.
 
-The root URL of the site returns 404 by design. The record lives at
-`/archive/operation-001_moma-sym/`.
+There is no program page at the root of the site: GitHub Pages renders the repository README
+there until the root is switched off (decided 2026-10-11; mechanism pending the board). The record
+lives at `/archive/operation-001_moma-sym/`.
 
 ---
 

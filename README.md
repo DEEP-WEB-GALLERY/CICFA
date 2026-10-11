@@ -45,7 +45,8 @@ The OS — context, strategy, use cases, cadence — lives in the private repo `
 here, one way, by a script. GitHub Pages serves this repo; `scripts/healthcheck.sh` guards it daily.
 
 ```
-// the root URL returns 404 by design — nothing is broken.
+// there is no program page at the root. what GitHub Pages renders there is this README,
+// until the root is switched off (decided 2026-10-11; mechanism pending the board).
 // the record lives at /archive/operation-001_moma-sym/ ; the program lives at cicfa.lol
 ```
 
