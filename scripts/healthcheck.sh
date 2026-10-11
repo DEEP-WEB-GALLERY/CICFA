@@ -113,11 +113,12 @@ sec "1. live site"
 code=$(httpcode "$PAGE_URL")
 if [ "$code" = "200" ]; then live_up=1; pass "GET $PAGE_URL -> $code (the archived Operation 001 page — the record)"
 else live_up=0; red "GET $PAGE_URL -> $code (expected 200)"; fi
-# The venue root was retired on 2026-10-11 (DEC-002): no root index.html, 404 by design (a custom
-# 404.html is served with a real 404 status). A 200 here means someone put a root page back.
+# The venue root was retired on 2026-10-11 (DEC-002): no root index.html. Until _config.yml disables
+# jekyll-readme-index (gated), GitHub Pages renders README.md at the root, so 200 is the known interim
+# state and only WARNs; 404 is the target state. A root index.html would be a regression either way.
 rcode=$(httpcode "$LIVE_URL")
 if [ "$rcode" = "404" ]; then pass "GET $LIVE_URL -> 404 (venue root retired by design, 2026-10-11)"
-elif [ "$rcode" = "200" ]; then warn "GET $LIVE_URL -> 200: a root page is back — the root was retired 2026-10-11 (DEC-002); remove it via PR"
+elif [ "$rcode" = "200" ]; then warn "GET $LIVE_URL -> 200: the root is retired (DEC-002) but still renders — Jekyll readme-index serves README.md until _config.yml switches it off (gated, D10); a root index.html would be a regression"
 else warn "GET $LIVE_URL -> $rcode (expected 404)"; fi
 
 # ── 2. repo state ────────────────────────────────────────────────────────────
