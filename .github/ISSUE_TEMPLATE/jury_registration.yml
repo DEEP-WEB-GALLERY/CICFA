@@ -1,12 +1,13 @@
-name: Jury Registration — Register as Juror
-description: Register as a CICFA juror for Operation 001. First volunteers fill the seats. Your vote is signed with your wallet and recorded on-chain.
+name: "[ARCHIVED] Jury Registration — Operation 001 (intake closed 2026-10-11)"
+description: Operation 001 is archived and this registration is closed (2026-10-11); no jury was ever seated. Kept on file as part of the record.
 title: "[JURY] "
 labels: ["jury", "operation-001"]
 body:
   - type: markdown
     attributes:
       value: |
-        ## CICFA JURY — OPERATION 001: MOMA.SYM
+        ## CICFA JURY — OPERATION 001: MOMA.SYM — ARCHIVED
+        **This registration closed on 2026-10-11.** Operation 001 is archived; no jury was ever seated (0/5). Kept on file as part of the record.
 
         The CICFA jury self-assembles from the first volunteers to register.
         **First come, first seated. Max 5 jurors.**
