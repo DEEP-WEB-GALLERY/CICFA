@@ -41,3 +41,36 @@ De los 8 pasos, la interfaz muestra algo para 1, 2, 3, 4, 6, 7 y 8; nada para 5.
 // pendiente de revisión independiente: esta tabla se reescribe con la evidencia revisada de la primera corrida del OS.
 
 **'No observado' no equivale a 'no existe'. 'Paid' en pantalla no prueba el mecanismo de liquidación.**
+
+
+---
+
+## rev 02 — después de run-01 (revisión independiente, 2026-10-11)
+
+> La tabla de arriba es la lectura externa inicial. Un investigador y un revisor independiente
+> (contextos disjuntos; el revisor re-verificó 60 URLs y la cadena pública de Sepolia) la
+> corrigieron. Resumen integrado; detalle en el OS (documento interno de evidencia de plataforma).
+
+| Paso | Nivel integrado | Lo que cambió |
+|---|---|---|
+| 1 Publicación | observado en interfaz · formulario Broadcast **desconocido** | el gate es un 307 a `/login`; sin cuenta no se vio el formulario |
+| 2 Financiación | **verificado por ejecución** | cada respaldo es un depósito en Sepolia a una EOA nueva por misión |
+| 3 Toma | observado en interfaz | sin distinción tomar/entregar |
+| 4 Evidencia | observado en interfaz | texto libre + fuentes sin validar; adjuntos: desconocido |
+| 5 Derecho a réplica | **no observado** (≠ "no existe") | ausencia en la superficie pública |
+| 6 Evaluación | observado en interfaz · declarado | 95 veredictos LLM, ninguno humano; 82 en "testing mode"; se aceptaron pruebas declaradamente falsas |
+| 7 Disputa | **verificado por ejecución** (latencia) | ventana efectiva ≤ ~80 s: el barrido del pool se mina ~1 min después del veredicto FULFILLED |
+| 7 Liquidación | **verificado por ejecución** · inferido | barrido automático de la EOA por misión; un pago fue auto-transferencia, otro a una dirección-sumidero; un clúster de un operador de pruebas |
+| 8 Registro | observado en interfaz | permalink público; sin export/API/créditos |
+
+Lo que «Paid» no probaba, ahora: **custodia** = EOA por misión controlada por la plataforma, sin contrato
+(verificado · inferido); **ventana de disputa** = ≤ ~80 s o inexistente (verificado); **disparo del pago**
+= el veredicto FULFILLED (inferido por latencia; el código sigue desconocido).
+
+**Bloqueo mínimo para el Ensayo 0 (integrado):** desacoplar el pago del veredicto de cumplimiento —
+retener las misiones con fondos en `FULFILLED_PENDING` (el estado ya existe) durante una ventana
+declarada y/o hasta confirmación humana. Un "modo asistido" que agregue un veredicto humano pero deje
+el barrido acoplado al FULFILLED de la IA no desbloquea nada. Marcador TEST y custodia no son el bloqueo
+mínimo; el registro exportable se cubre fuera de plataforma.
+
+// "no observado" no equivale a "no existe". "Paid" en pantalla no prueba el mecanismo de liquidación — y ahora sabemos bastante más de ese mecanismo.

@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>CICFA // Session Report</title>
+<meta name="description" content="Qué construimos el 2026-10-11: el OS privado de CICFA, el archivo de la Operación 001, y lo que aprendimos de cicfa.lol.">
+<style>
+/* Layout: single-column reading column, amber-phosphor terminal on black (homage to cicfa.lol). Dark-only by deliberate choice. */
+:root{
+  --bg:#0b0800; --panel:#141005; --panel-2:#1b1507; --line:#2e2409; --line-hot:#4a3a0d;
+  --ink:#f2e6c9; --mid:#c9b38a; --muted:#8a6a2a; --dim:#6e5420;
+  --amber:#ffb000; --amber-2:#c98a12; --sel:#2a1d00;
+  --green:#3ddc84; --red:#ff4d3d; --warn:#ffd84d; --blue:#5aa9ff;
+  /* chart categorical (validated on this surface): amber / blue / magenta */
+  --c1:#b97c0e; --c2:#3b82d6; --c3:#c0569a;
+  /* ordinal evidence ramp (validated) low→high certainty */
+  --e1:#5a4008; --e2:#7e5a0a; --e3:#a5760d; --e4:#cf9412; --e5:#ffbe3d;
+  --mono:ui-monospace,SFMono-Regular,Menlo,"DejaVu Sans Mono",Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:14px;line-height:1.6;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:0}
+a{color:var(--amber);text-decoration:none;border-bottom:1px solid var(--line-hot)}
+a:hover{background:var(--amber);color:var(--bg);border-color:var(--amber)}
+h1,h2,h3{text-wrap:balance;margin:0}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.rule{height:1px;background:var(--line);border:0;margin:0}
+section{padding-block:34px;border-top:1px solid var(--line)}
+section:first-of-type{border-top:0}
+.sec-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.sec-n{font-size:11px;color:var(--amber-2);letter-spacing:.16em}
+.sec-t{font-size:19px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);font-weight:600}
+.lede{color:var(--mid);max-width:68ch}
+p{margin:0 0 12px}
+small{color:var(--muted)}
+.mono-note{color:var(--muted);font-size:12.5px}
+.cmt{color:var(--dim)}
+strong{color:var(--ink);font-weight:600}
+.amber{color:var(--amber)}
+code{background:var(--panel-2);border:1px solid var(--line);border-radius:3px;padding:0 5px;color:var(--mid);font-size:.92em}
+
+/* top bar */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(11,8,0,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line-hot)}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:46px}
+.brand{font-weight:700;letter-spacing:.18em;color:var(--amber)}
+.brand .slash{color:var(--muted)}
+.topbar nav{display:flex;gap:16px;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.topbar nav a{border:0;color:var(--muted)}
+.topbar nav a:hover{background:transparent;color:var(--amber)}
+@media(max-width:640px){.topbar nav{display:none}}
+
+/* hero */
+.hero{padding-block:46px 30px}
+.hero h1{font-size:clamp(27px,7vw,68px);letter-spacing:.02em;line-height:1.0;color:var(--amber);font-weight:700;overflow-wrap:break-word}
+@media(min-width:560px){.hero h1{letter-spacing:.06em}}
+.hero .sub{margin-top:14px;color:var(--mid);font-size:15px;max-width:70ch}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.pill{font-size:11px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line-hot);border-radius:2px;padding:4px 9px;color:var(--mid);background:var(--panel)}
+.pill b{color:var(--amber);font-weight:600}
+.pill.ok{border-color:#1f5a33;color:var(--green)}
+.pill.warn{border-color:#5a4a0d;color:var(--warn)}
+
+/* status strip */
+.statusline{font-size:11.5px;letter-spacing:.08em;color:var(--muted);border:1px dashed var(--line-hot);border-radius:3px;padding:8px 12px;margin-top:22px;overflow-x:auto;white-space:nowrap}
+.statusline b{color:var(--green)}
+.statusline .x{color:var(--amber-2)}
+
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px 15px}
+.tile .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tile .v{font-size:30px;line-height:1.1;margin-top:6px;color:var(--ink);font-weight:600}
+.tile .v .u{font-size:14px;color:var(--muted)}
+.tile .d{font-size:11.5px;margin-top:4px;color:var(--mid)}
+.tile .d.good{color:var(--green)}
+
+/* generic card + grid */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:720px){.grid2,.grid3{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:16px}
+.card h3{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-2);margin-bottom:10px}
+figure{margin:0}
+figcaption{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+.scroll{overflow-x:auto}
+svg{max-width:100%;height:auto;display:block}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+.scroll table{min-width:560px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td b{color:var(--ink)}
+tbody tr:hover{background:var(--panel-2)}
+.tag{display:inline-block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:1px solid var(--line-hot);color:var(--mid);white-space:nowrap}
+.tag.done{color:var(--green);border-color:#1f5a33}
+.tag.open{color:var(--warn);border-color:#5a4a0d}
+.tag.block{color:var(--red);border-color:#5a2420}
+.tag.urgent{background:var(--red);color:#1a0603;border-color:var(--red);font-weight:700}
+
+/* evidence legend */
+.elegend{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 0}
+.echip{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid);border:1px solid var(--line);border-radius:2px;padding:3px 7px}
+.sw{width:11px;height:11px;border-radius:2px;flex:0 0 auto}
+
+/* lists */
+.lanes{display:grid;gap:10px}
+.lane{display:grid;grid-template-columns:118px 1fr;gap:12px;align-items:start;border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:11px 13px}
+.lane .step{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber-2)}
+.lane .body{color:var(--mid);font-size:12.5px}
+.lane .body b{color:var(--ink)}
+@media(max-width:560px){.lane{grid-template-columns:1fr;gap:4px}}
+
+/* progress milestone bars */
+.ms{display:grid;gap:14px}
+.ms-row{display:grid;grid-template-columns:150px 1fr auto;gap:14px;align-items:center}
+.ms-row .name{font-size:12px;color:var(--ink)}
+.ms-row .name small{display:block;color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.bar{height:16px;background:var(--panel-2);border:1px solid var(--line);border-radius:2px;position:relative;overflow:hidden}
+.bar>span{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--amber-2),var(--amber));display:block}
+.bar.blocked>span{background:repeating-linear-gradient(45deg,#4a3a0d,#4a3a0d 6px,#2e2409 6px,#2e2409 12px)}
+.ms-row .pct{font-size:12px;color:var(--mid);font-variant-numeric:tabular-nums;min-width:66px;text-align:right}
+@media(max-width:560px){.ms-row{grid-template-columns:1fr auto}.bar{grid-column:1/-1;order:3}}
+
+/* callout */
+.callout{border:1px solid var(--line-hot);border-left-width:4px;border-radius:4px;background:var(--panel);padding:14px 16px}
+.callout.red{border-left-color:var(--red)}
+.callout.amber{border-left-color:var(--amber)}
+.callout .h{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-2);margin-bottom:6px}
+.callout.red .h{color:var(--red)}
+.callout p{margin:0;color:var(--mid)}
+
+ul.clean{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+ul.clean li{padding-left:20px;position:relative;color:var(--mid)}
+ul.clean li::before{content:"›";position:absolute;left:4px;color:var(--amber-2)}
+ul.no li::before{content:"✕";color:var(--red)}
+ul.yes li::before{content:"✓";color:var(--green)}
+
+footer{border-top:1px solid var(--line-hot);padding-block:26px 40px;color:var(--muted);font-size:12px}
+.foot-status{font-size:11px;letter-spacing:.08em;color:var(--dim);overflow-x:auto;white-space:nowrap;margin-bottom:12px}
+.foot-status b{color:var(--green)}
+::selection{background:var(--sel)}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap">
+  <span class="brand">CICFA<span class="slash"> // </span>SESSION REPORT</span>
+  <nav>
+    <a href="#resumen">Resumen</a>
+    <a href="#arq">Arquitectura</a>
+    <a href="#plataforma">Plataforma</a>
+    <a href="#decisiones">Decisiones</a>
+  </nav>
+</div></div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">DWG-CICFA-01 · reporte de sesión · 2026-10-11</div>
+    <h1>Rearmamos el<br>núcleo de CICFA.</h1>
+    <p class="sub">En una sesión reconstruimos cómo funciona el proyecto: un sistema operativo privado que orquesta las operaciones, el archivo honesto de la Operación 001, y el primer estudio serio de la plataforma <a href="https://cicfa.lol">cicfa.lol</a>. Este documento es para el equipo.</p>
+    <div class="pills">
+      <span class="pill ok"><b>HITOS 0–2</b> verificados</span>
+      <span class="pill"><b>OS</b> CICFA-OS Mark I</span>
+      <span class="pill"><b>PLATAFORMA</b> cicfa.lol v0.1</span>
+      <span class="pill"><b>OPERACIÓN 001</b> archivada</span>
+      <span class="pill warn"><b>1</b> decisión urgente</span>
+    </div>
+    <div class="statusline">CICFA OS · <b>HEALTHCHECK: ALL GREEN</b> · <span class="x">2 REPOS LIMPIOS</span> · 25/25 TESTS · <span class="x">RUN-01: researcher × reviewer</span> · OBJETIVO: ABIERTO · <b>EJECUCIÓN AUTÓNOMA</b></div>
+  </header>
+
+  <!-- ================= RESUMEN ================= -->
+  <section id="resumen">
+    <div class="sec-h"><span class="sec-n">01</span><span class="sec-t">Resumen</span></div>
+    <p class="lede">El objetivo no era “reorganizar archivos”, sino dejar una base que haga posible una acción nueva. Al cierre: el pasado quedó archivado con honestidad, el OS arranca y orienta el trabajo, y Comander demostró que coordina de verdad.</p>
+    <div class="tiles" style="margin-top:18px">
+      <div class="tile"><div class="k">Hitos verificados</div><div class="v">3<span class="u"> / 4</span></div><div class="d good">0 · 1 · 2 con evidencia</div></div>
+      <div class="tile"><div class="k">Commits (OS privado)</div><div class="v">23</div><div class="d">+ 3 PR en el repo público</div></div>
+      <div class="tile"><div class="k">Healthcheck público</div><div class="v">12<span class="u"> / 12</span></div><div class="d good">ALL GREEN · CI reactivado</div></div>
+      <div class="tile"><div class="k">Tests del publicador</div><div class="v">25<span class="u"> / 25</span></div><div class="d good">0 fallos</div></div>
+      <div class="tile"><div class="k">Misiones estudiadas</div><div class="v">56</div><div class="d">on-chain en Sepolia</div></div>
+      <div class="tile"><div class="k">Decisiones para Boris</div><div class="v">9</div><div class="d">1 urgente (D13)</div></div>
+    </div>
+
+    <div class="grid2" style="margin-top:18px">
+      <div class="card">
+        <h3>Lo que hicimos</h3>
+        <ul class="clean yes">
+          <li><b>OS privado</b> nuevo: <code>DEEP-WEB-GALLERY/cicfa-os</code>, estructura 4C, agente orquestador <b>CICFA Comander</b>.</li>
+          <li><b>Operación 001 / MOMA.SYM archivada</b> como prueba pasada; la página sigue publicada como registro.</li>
+          <li><b>Publicación unidireccional</b> hacia el repo público, con detección de deriva y 25 tests.</li>
+          <li><b>Estudio de cicfa.lol</b> verificado en la cadena, no solo en pantalla.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Lo que NO hicimos</h3>
+        <ul class="clean no">
+          <li>No enviamos nada a nadie (el borrador para Manu está escrito, <b>sin enviar</b>).</li>
+          <li>No publicamos misiones ni tocamos la plataforma más allá de lectura.</li>
+          <li>No creamos cuentas, no invitamos gente, no cambiamos permisos.</li>
+          <li>No hay código de explotación. Nunca.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ARQUITECTURA ================= -->
+  <section id="arq">
+    <div class="sec-h"><span class="sec-n">02</span><span class="sec-t">Arquitectura — dos cuerpos</span></div>
+    <p class="lede">CICFA tiene ahora dos cuerpos: el <strong>OS</strong> (privado, donde se gobierna y se decide) y la <strong>plataforma</strong> (pública, donde pasan las misiones). El repo que ya conocían queda como <strong>cara publicada</strong>: recibe contenido en una sola dirección y nunca se edita a mano.</p>
+
+    <div class="scroll" style="margin-top:8px">
+    <figure>
+      <svg viewBox="0 0 920 300" role="img" aria-label="Diagrama: el OS privado publica en una sola dirección hacia el repo público, que GitHub Pages sirve; la plataforma cicfa.lol es un cuerpo separado.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffb000"/></marker>
+          <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6e5420"/></marker>
+        </defs>
+        <!-- private OS -->
+        <rect x="14" y="40" width="250" height="220" rx="6" fill="#141005" stroke="#4a3a0d"/>
+        <text x="30" y="66" fill="#ffb000" font-size="13" font-family="monospace" letter-spacing="1.5">OS · PRIVADO</text>
+        <text x="30" y="84" fill="#8a6a2a" font-size="11" font-family="monospace">DEEP-WEB-GALLERY/cicfa-os</text>
+        <g font-family="monospace" font-size="11.5" fill="#c9b38a">
+          <text x="30" y="116">context/ · identidad, estrategia</text>
+          <text x="30" y="140">connections/ · integraciones</text>
+          <text x="30" y="164">capabilities/ · agentes, flujos</text>
+          <text x="30" y="188">cadence · pulso, decisiones</text>
+          <text x="30" y="212">usecases/B0.1/ · el caso</text>
+        </g>
+        <text x="30" y="242" fill="#6e5420" font-size="10.5" font-family="monospace">local · no se versiona (gitignored)</text>
+
+        <!-- publish arrow -->
+        <line x1="266" y1="150" x2="388" y2="150" stroke="#ffb000" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="327" y="140" fill="#ffb000" font-size="10.5" font-family="monospace" text-anchor="middle" letter-spacing="1">publish</text>
+        <text x="327" y="168" fill="#8a6a2a" font-size="9.5" font-family="monospace" text-anchor="middle">una dirección · manifiesto</text>
+
+        <!-- public face -->
+        <rect x="392" y="40" width="238" height="220" rx="6" fill="#141005" stroke="#2e2409"/>
+        <text x="408" y="66" fill="#ffb000" font-size="13" font-family="monospace" letter-spacing="1.5">CARA · PÚBLICA</text>
+        <text x="408" y="84" fill="#8a6a2a" font-size="11" font-family="monospace">DEEP-WEB-GALLERY/CICFA</text>
+        <g font-family="monospace" font-size="11.5" fill="#c9b38a">
+          <text x="408" y="116">archive/ · la Operación 001</text>
+          <text x="408" y="140">onboarding/ · ética, glosario</text>
+          <text x="408" y="164">usecases/B0.1/ · render público</text>
+          <text x="408" y="188">404.html · README</text>
+          <text x="408" y="212">scripts/healthcheck.sh</text>
+        </g>
+        <text x="408" y="242" fill="#6e5420" font-size="10.5" font-family="monospace">generado · nunca editado a mano</text>
+
+        <!-- pages arrow -->
+        <line x1="632" y1="150" x2="754" y2="150" stroke="#6e5420" stroke-width="2" marker-end="url(#arg)"/>
+        <text x="693" y="140" fill="#8a6a2a" font-size="10.5" font-family="monospace" text-anchor="middle">Pages</text>
+
+        <!-- pages + platform -->
+        <rect x="758" y="40" width="148" height="100" rx="6" fill="#141005" stroke="#2e2409"/>
+        <text x="772" y="66" fill="#c9b38a" font-size="11" font-family="monospace">github.io</text>
+        <text x="772" y="86" fill="#8a6a2a" font-size="9.5" font-family="monospace">/archive/…</text>
+        <text x="772" y="104" fill="#8a6a2a" font-size="9.5" font-family="monospace">el registro</text>
+
+        <rect x="758" y="160" width="148" height="100" rx="6" fill="#1b1507" stroke="#4a3a0d"/>
+        <text x="772" y="186" fill="#ffb000" font-size="12" font-family="monospace">cicfa.lol</text>
+        <text x="772" y="206" fill="#8a6a2a" font-size="9.5" font-family="monospace">la plataforma</text>
+        <text x="772" y="224" fill="#8a6a2a" font-size="9.5" font-family="monospace">v0.1 · el venue</text>
+        <text x="772" y="246" fill="#6e5420" font-size="9" font-family="monospace">codebase aparte</text>
+      </svg>
+      <figcaption>El OS privado es la fuente de verdad. La cara pública recibe solo lo marcado <code>visibility: public</code>, por un script, en una dirección. cicfa.lol es un cuerpo separado que construye Manu. <span class="cmt">// un programa, dos cuerpos: el repo es el registro, la plataforma es el venue.</span></figcaption>
+    </figure>
+    </div>
+
+    <div class="grid3" style="margin-top:18px">
+      <div class="card"><h3>Context + Connections</h3><p class="mono-note">Quiénes somos y con qué hablamos: identidad, ética, la gente, el objetivo abierto, y las conexiones (GitHub, cicfa.lol, el tracker de issues en solo lectura).</p></div>
+      <div class="card"><h3>Capabilities</h3><p class="mono-note">Lo que el OS puede hacer: <b>CICFA Comander</b> + 3 roles de operación, 6 flujos de trabajo (<code>WF_*</code>), y las skills.</p></div>
+      <div class="card"><h3>Cadence</h3><p class="mono-note">Cómo corre el tiempo: pulso, registro de decisiones, rutinas, y la <b>evidencia</b> de cada corrida.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= HITOS ================= -->
+  <section id="hitos">
+    <div class="sec-h"><span class="sec-n">03</span><span class="sec-t">Hitos — por resultado, no por versión</span></div>
+    <p class="lede">El plan se ordenó por resultados observables, cada uno con evidencia. Un hito de ejecución nunca es una versión del OS.</p>
+    <div class="ms" style="margin-top:18px">
+      <div class="ms-row"><div class="name">Hito 0<small>Preparación</small></div><div class="bar"><span style="width:100%"></span></div><div class="pct">verificado</div></div>
+      <div class="ms-row"><div class="name">Hito 1<small>Base + archivo</small></div><div class="bar"><span style="width:100%"></span></div><div class="pct">verificado</div></div>
+      <div class="ms-row"><div class="name">Hito 2<small>Comander ejercitado</small></div><div class="bar"><span style="width:100%"></span></div><div class="pct">verificado</div></div>
+      <div class="ms-row"><div class="name">Hito 3<small>Ensayo 0 · plataforma</small></div><div class="bar blocked"><span style="width:28%"></span></div><div class="pct">bloqueado</div></div>
+    </div>
+    <div class="lanes" style="margin-top:20px">
+      <div class="lane"><div class="step">Hito 0</div><div class="body"><b>Preparación.</b> Audio del plan en el escritorio, tag de rollback (<code>pre-canon-2026-10-11</code>), capturas del sitio antes de tocarlo, y el repo privado creado desde el templater de COMANDO.</div></div>
+      <div class="lane"><div class="step">Hito 1</div><div class="body"><b>Base operativa y archivo.</b> El OS bootea (Charter → boot spec → ética → pulso). MOMA.SYM archivada y servida; healthcheck en verde; CI reactivado; publicador con estado y tests.</div></div>
+      <div class="lane"><div class="step">Hito 2</div><div class="body"><b>Comander ejercitado.</b> Una orquestación real: investigador + revisor independiente sobre cicfa.lol, más el subagente del jurado probado desde una sesión anidada. Cadena del Charter verificada en runtime.</div></div>
+      <div class="lane"><div class="step">Hito 3</div><div class="body"><b>Ensayo 0.</b> Diseñado; bloqueado por acuerdos con Manu y decisiones tuyas. El bloqueo mínimo ya está identificado (abajo).</div></div>
+    </div>
+  </section>
+
+  <!-- ================= ARCHIVO / TIMELINE ================= -->
+  <section id="archivo">
+    <div class="sec-h"><span class="sec-n">04</span><span class="sec-t">El archivo — Operación 001</span></div>
+    <p class="lede">La primera operación (MOMA.SYM) corrió de marzo a julio y se archivó como prueba pasada. La página sigue publicada como registro, etiquetada. Nadie envió nunca una submission; el jurado nunca se sentó; el pot fue comprometido.</p>
+
+    <div class="scroll" style="margin-top:8px">
+    <figure>
+      <svg viewBox="0 0 920 150" role="img" aria-label="Línea de tiempo de la Operación 001, de marzo a octubre de 2026.">
+        <line x1="20" y1="95" x2="900" y2="95" stroke="#2e2409" stroke-width="1"/>
+        <!-- ticks -->
+        <g font-family="monospace" font-size="10.5" fill="#8a6a2a">
+          <!-- launch -->
+          <circle cx="60" cy="95" r="4.5" fill="#b97c0e"/><text x="60" y="120" text-anchor="middle">03-17</text><text x="60" y="78" text-anchor="middle" fill="#c9b38a">launch</text>
+          <!-- v2 + fork -->
+          <circle cx="150" cy="95" r="4.5" fill="#b97c0e"/><text x="150" y="120" text-anchor="middle">03-18</text><text x="150" y="60" text-anchor="middle" fill="#8a6a2a">v2 · fork</text>
+          <!-- only contribution -->
+          <circle cx="210" cy="95" r="4.5" fill="#b97c0e"/><text x="210" y="134" text-anchor="middle">03-19</text><text x="210" y="78" text-anchor="middle" fill="#c9b38a">Ξ0.000662</text>
+          <!-- snapshot -->
+          <circle cx="430" cy="95" r="4.5" fill="#6e5420"/><text x="430" y="120" text-anchor="middle">05-22</text>
+          <!-- SWEEP -->
+          <circle cx="600" cy="95" r="6" fill="#ff4d3d"/><text x="600" y="120" text-anchor="middle" fill="#ff4d3d">07-10</text><text x="600" y="60" text-anchor="middle" fill="#ff4d3d">POT SWEPT</text><text x="600" y="76" text-anchor="middle" fill="#8a6a2a">77 wallets</text>
+          <!-- healthcheck + truth -->
+          <circle cx="720" cy="95" r="4.5" fill="#b97c0e"/><text x="720" y="120" text-anchor="middle">07-26</text><text x="720" y="78" text-anchor="middle" fill="#c9b38a">truth</text>
+          <!-- archived -->
+          <circle cx="880" cy="95" r="6" fill="#ffb000"/><text x="880" y="120" text-anchor="middle" fill="#ffb000">10-11</text><text x="880" y="78" text-anchor="middle" fill="#ffb000">archivada</text>
+        </g>
+      </svg>
+      <figcaption>De 39 commits y 0 submissions a un pot robado: desde julio, la ingeniería del repo se fue en <em>cuidar un pot muerto</em>. Esa es la lección que B0.1 responde.</figcaption>
+    </figure>
+    </div>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <h3>Estado al archivarse</h3>
+        <table>
+          <tbody>
+            <tr><td><b>Jurado</b></td><td>nunca se sentó · 0/5</td></tr>
+            <tr><td><b>Submissions</b></td><td>0 · verificado 2026-10-11</td></tr>
+            <tr><td><b>Pot</b></td><td style="color:var(--red)">comprometido · vaciado 07-10 (DEE-30)</td></tr>
+            <tr><td><b>Página</b></td><td>publicada como registro, etiquetada</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Las 7 lecciones que B0.1 contesta</h3>
+        <ul class="clean" style="font-size:12px">
+          <li>El circuito se ejecuta de punta a punta, o no es la obra.</li>
+          <li>La custodia es un requisito de diseño; ensayar en testnet.</li>
+          <li>La revisión se dota antes de publicar; la IA organiza, humanos dictaminan.</li>
+          <li>Institución-agnóstico hasta que existan reglas, fondos y revisión.</li>
+          <li>La recompensa paga la investigación, no una acusación predeterminada.</li>
+          <li>Un solo juego de reglas, idéntico en todas las superficies.</li>
+          <li>El monitoreo sobrevive a la operación.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PLATAFORMA ================= -->
+  <section id="plataforma">
+    <div class="sec-h"><span class="sec-n">05</span><span class="sec-t">Lo que aprendimos de cicfa.lol</span></div>
+    <p class="lede">Run-01: un investigador observó la plataforma desde afuera y un revisor independiente, sin ver su trabajo, re-verificó 60 URLs y la cadena de Sepolia. Cada afirmación lleva su nivel de evidencia. Lo importante: lo verificamos en la cadena, no solo en pantalla.</p>
+
+    <div class="elegend" style="margin:14px 0 18px">
+      <span class="echip"><span class="sw" style="background:var(--e5)"></span>verificado por ejecución</span>
+      <span class="echip"><span class="sw" style="background:var(--e4)"></span>observado en interfaz</span>
+      <span class="echip"><span class="sw" style="background:var(--e3)"></span>declarado</span>
+      <span class="echip"><span class="sw" style="background:var(--e2)"></span>inferido</span>
+      <span class="echip"><span class="sw" style="background:var(--e1)"></span>desconocido</span>
+    </div>
+
+    <!-- 8 steps evidence table -->
+    <div class="card" style="margin-bottom:18px">
+      <h3>El circuito de 8 pasos, contra lo que la plataforma implementa</h3>
+      <div class="scroll"><table>
+        <thead><tr><th style="width:26px">#</th><th>Paso del circuito</th><th>Qué muestra cicfa.lol v0.1</th><th style="width:150px">Nivel</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><b>Publicación</b> con reglas</td><td>“Broadcast”, detrás de login; bloques objective/brief/rules</td><td><span class="sw" style="display:inline-block;background:var(--e4);vertical-align:middle"></span> observado · <span class="cmt">form sin ver</span></td></tr>
+          <tr><td>2</td><td><b>Financiación</b> previa</td><td>cada backer = un depósito real a una EOA nueva por misión</td><td><span class="sw" style="display:inline-block;background:var(--e5);vertical-align:middle"></span> por ejecución</td></tr>
+          <tr><td>3</td><td><b>Toma</b> / claim</td><td>existe; sin distinción tomar/entregar</td><td><span class="sw" style="display:inline-block;background:var(--e4);vertical-align:middle"></span> observado</td></tr>
+          <tr><td>4</td><td><b>Evidencia</b></td><td>texto libre + links sin validar; sin adjuntos</td><td><span class="sw" style="display:inline-block;background:var(--e4);vertical-align:middle"></span> observado</td></tr>
+          <tr><td>5</td><td><b>Derecho a réplica</b></td><td style="color:var(--red)">no existe en la superficie pública</td><td><span class="sw" style="display:inline-block;background:var(--e1);vertical-align:middle"></span> no observado</td></tr>
+          <tr><td>6</td><td><b>Evaluación</b></td><td>95 veredictos LLM, 0 humanos; 82 en “testing mode”; aceptó pruebas falsas</td><td><span class="sw" style="display:inline-block;background:var(--e4);vertical-align:middle"></span> observado</td></tr>
+          <tr><td>7</td><td><b>Disputa + liquidación</b></td><td style="color:var(--warn)">ventana efectiva ≤ ~80 s; el pago se dispara con el veredicto</td><td><span class="sw" style="display:inline-block;background:var(--e5);vertical-align:middle"></span> por ejecución</td></tr>
+          <tr><td>8</td><td><b>Registro</b> exportable</td><td>permalink público; sin API, export, créditos ni licencia</td><td><span class="sw" style="display:inline-block;background:var(--e4);vertical-align:middle"></span> observado</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- THE finding: settlement latency -->
+    <div class="callout amber" style="margin-bottom:18px">
+      <div class="h">El hallazgo que define el Ensayo 0</div>
+      <p>El barrido del pool se mina <strong>~1 minuto después</strong> del veredicto de cumplimiento de la IA. No hay ventana de disputa real. Por eso el bloqueo mínimo no es un “modo asistido”: es <strong class="amber">desacoplar el pago del veredicto</strong>.</p>
+    </div>
+
+    <div class="grid2">
+      <!-- settlement latency chart -->
+      <div class="card">
+        <h3>Latencia: veredicto FULFILLED → barrido del pool</h3>
+        <figure>
+          <svg viewBox="0 0 440 210" role="img" aria-label="Barras: el pago se mina alrededor de un minuto después del veredicto en 4 de 5 misiones.">
+            <!-- axis -->
+            <line x1="92" y1="16" x2="92" y2="168" stroke="#2e2409"/>
+            <line x1="92" y1="168" x2="424" y2="168" stroke="#2e2409"/>
+            <!-- ref line for ~80s window -->
+            <g font-family="monospace" font-size="9.5" fill="#8a6a2a">
+              <!-- bars: scale 0..90s across 300px (clip m8) -->
+              <!-- m13 48s -->
+              <text x="86" y="37" text-anchor="end" fill="#c9b38a">m13</text>
+              <rect x="92" y="26" width="160" height="16" rx="0" fill="#b97c0e"/><rect x="250" y="26" width="2" height="16" fill="#0b0800"/>
+              <text x="258" y="38" fill="#c9b38a">48 s</text>
+              <!-- m6 60s -->
+              <text x="86" y="63" text-anchor="end" fill="#c9b38a">m6</text>
+              <rect x="92" y="52" width="200" height="16" fill="#b97c0e"/><text x="298" y="64" fill="#c9b38a">~60 s</text>
+              <!-- m7 -->
+              <text x="86" y="89" text-anchor="end" fill="#c9b38a">m7</text>
+              <rect x="92" y="78" width="200" height="16" fill="#b97c0e"/><text x="298" y="90" fill="#c9b38a">~60 s</text>
+              <!-- m9 -->
+              <text x="86" y="115" text-anchor="end" fill="#c9b38a">m9</text>
+              <rect x="92" y="104" width="200" height="16" fill="#b97c0e"/><text x="298" y="116" fill="#c9b38a">~60 s</text>
+              <!-- m8 73 min (broken) -->
+              <text x="86" y="141" text-anchor="end" fill="#c9b38a">m8</text>
+              <rect x="92" y="130" width="300" height="16" fill="#6e5420"/>
+              <text x="398" y="142" fill="#8a6a2a">73 min ⟂</text>
+              <!-- x ticks -->
+              <text x="92" y="184" text-anchor="middle">0</text>
+              <text x="192" y="184" text-anchor="middle">30 s</text>
+              <text x="292" y="184" text-anchor="middle">60 s</text>
+              <text x="392" y="184" text-anchor="middle" fill="#6e5420">+ ∞</text>
+            </g>
+          </svg>
+          <figcaption>En 4 de 5 misiones liquidadas, el pago precede a cualquier disputa posible. “Dispute window cleared” es texto, no una espera.</figcaption>
+        </figure>
+      </div>
+
+      <!-- curation chart -->
+      <div class="card">
+        <h3>Curaduría: 95 veredictos, ninguno humano</h3>
+        <figure>
+          <svg viewBox="0 0 440 210" role="img" aria-label="Barras de los veredictos por curador y modo; cero veredictos humanos.">
+            <g font-family="monospace" font-size="10" fill="#8a6a2a">
+              <text x="12" y="20" fill="#c9b38a" font-size="10.5">POR CURADOR (de 95)</text>
+              <!-- gpt 77 -->
+              <text x="12" y="42" fill="#c9b38a">gpt-oss-120b</text>
+              <rect x="150" y="32" width="258" height="14" fill="#3b82d6"/><text x="414" y="43" fill="#c9b38a">77</text>
+              <!-- llama 17 -->
+              <text x="12" y="64" fill="#c9b38a">llama-3.3-70b</text>
+              <rect x="150" y="54" width="57" height="14" fill="#3b82d6"/><text x="213" y="65" fill="#c9b38a">17</text>
+              <!-- mock 1 -->
+              <text x="12" y="86" fill="#c9b38a">mock-curator</text>
+              <rect x="150" y="76" width="6" height="14" fill="#3b82d6"/><text x="162" y="87" fill="#c9b38a">1</text>
+              <!-- human 0 -->
+              <text x="12" y="108" fill="#ff4d3d">humano</text>
+              <rect x="150" y="98" width="2" height="14" fill="#ff4d3d"/><text x="160" y="109" fill="#ff4d3d">0</text>
+
+              <line x1="12" y1="124" x2="428" y2="124" stroke="#2e2409"/>
+              <text x="12" y="146" fill="#c9b38a" font-size="10.5">MODO (de 95)</text>
+              <!-- testing-mode auto 82 -->
+              <text x="12" y="168" fill="#ffd84d">testing mode</text>
+              <rect x="150" y="158" width="276" height="14" fill="#c0569a"/><text x="414" y="169" fill="#c9b38a">82</text>
+              <text x="150" y="188" fill="#8a6a2a" font-size="9">54 auto-approved · 28 auto-fulfilled</text>
+            </g>
+          </svg>
+          <figcaption>La IA no asiste: cierra la misión. Una misión fue rechazada, luego aprobada por otro curador, luego auto-cumplida y pagada. Se aceptó evidencia que se declaraba falsa.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px">
+      <!-- fixtures chart -->
+      <div class="card">
+        <h3>El tablero: fixtures vs misiones reales</h3>
+        <figure>
+          <svg viewBox="0 0 440 130" role="img" aria-label="De 56 misiones, 47 son fixtures de pentest; las 33 activas son todas fixtures.">
+            <g font-family="monospace" font-size="10" fill="#8a6a2a">
+              <text x="12" y="20" fill="#c9b38a">Total 56</text>
+              <rect x="110" y="10" width="252" height="16" fill="#c0569a"/><rect x="362" y="10" width="2" height="16" fill="#0b0800"/><rect x="364" y="10" width="48" height="16" fill="#b97c0e"/>
+              <text x="236" y="22" fill="#1a1307" text-anchor="middle">47 fixtures</text><text x="388" y="22" fill="#1a1307" text-anchor="middle">9</text>
+
+              <text x="12" y="56" fill="#c9b38a">Activas 33</text>
+              <rect x="110" y="46" width="302" height="16" fill="#c0569a"/>
+              <text x="261" y="58" fill="#1a1307" text-anchor="middle">33 fixtures · 0 reales</text>
+
+              <text x="12" y="92" fill="#c9b38a">Curatoriales</text>
+              <rect x="110" y="82" width="82" height="16" fill="#b97c0e"/>
+              <text x="200" y="94" fill="#c9b38a">las ~9 reales están archivadas</text>
+            </g>
+          </svg>
+          <figcaption>No hay un flag TEST estructurado; “TEST” aparece solo dentro de algunos títulos. Un bounty real necesita un tablero que diga la verdad.</figcaption>
+        </figure>
+      </div>
+
+      <!-- on-chain facts -->
+      <div class="card">
+        <h3>Hechos on-chain (Sepolia)</h3>
+        <ul class="clean" style="font-size:12px">
+          <li><b>Custodia</b>: una EOA nueva por misión, controlada por la plataforma, sin contrato.</li>
+          <li><b>Pago</b> = barrido del saldo completo menos gas.</li>
+          <li>Dos misiones figuran <b>PAID sin tx</b>.</li>
+          <li>Un pago fue una <b>auto-transferencia</b> (el ETH sigue ahí).</li>
+          <li>Otro fue a una <b>dirección-sumidero</b> (2M ETH de testnet, 0 txs salientes).</li>
+          <li>El “1.5 ETH” circula dentro del clúster de un operador de pruebas.</li>
+        </ul>
+        <p class="mono-note" style="margin-top:10px"><span class="cmt">// lección para el OS: cuando tenés un hash de tx, leé la dirección, no solo la tx.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ENSAYO 0 ================= -->
+  <section id="ensayo">
+    <div class="sec-h"><span class="sec-n">06</span><span class="sec-t">Ensayo 0 — el experimento que decide</span></div>
+    <p class="lede">En lugar de seis sesiones de discusión, hay un experimento: un circuito cerrado donde <strong>CICFA se encarga a sí misma</strong>. El objeto es la propia Operación 001. Sin institución real, sin plata real (Sepolia). Mide dos cosas: qué completa la plataforma, y si el registro exportado lee como obra, como conflicto o como informe.</p>
+
+    <div class="scroll" style="margin-top:8px">
+    <figure>
+      <svg viewBox="0 0 920 230" role="img" aria-label="El circuito de siete etapas, con la etapa de pago señalada como el punto que hay que desacoplar del veredicto.">
+        <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a6a2a"/></marker></defs>
+        <g font-family="monospace" font-size="10.5">
+          <!-- nodes -->
+          <g>
+            <rect x="12" y="40" width="112" height="50" rx="5" fill="#141005" stroke="#4a3a0d"/><text x="68" y="62" text-anchor="middle" fill="#c9b38a">1 publicación</text><text x="68" y="78" text-anchor="middle" fill="#8a6a2a" font-size="9">reglas antes</text>
+            <rect x="150" y="40" width="112" height="50" rx="5" fill="#141005" stroke="#2e2409"/><text x="206" y="62" text-anchor="middle" fill="#c9b38a">2 toma</text>
+            <rect x="288" y="40" width="112" height="50" rx="5" fill="#141005" stroke="#2e2409"/><text x="344" y="62" text-anchor="middle" fill="#c9b38a">3 evidencia</text>
+            <rect x="426" y="40" width="150" height="50" rx="5" fill="#141005" stroke="#4a3a0d"/><text x="501" y="58" text-anchor="middle" fill="#c9b38a">4 evaluación</text><text x="501" y="74" text-anchor="middle" fill="#8a6a2a" font-size="9">IA + humano en paralelo</text>
+            <rect x="602" y="40" width="112" height="50" rx="5" fill="#141005" stroke="#4a3a0d"/><text x="658" y="62" text-anchor="middle" fill="#c9b38a">5 disputa</text><text x="658" y="78" text-anchor="middle" fill="#8a6a2a" font-size="9">ventana</text>
+            <!-- payout node: the hinge -->
+            <rect x="602" y="140" width="112" height="56" rx="5" fill="#1b1507" stroke="#ffb000" stroke-width="2"/><text x="658" y="162" text-anchor="middle" fill="#ffb000">6 liquidación</text><text x="658" y="178" text-anchor="middle" fill="#ffd84d" font-size="9">debe ESPERAR</text>
+            <rect x="426" y="140" width="150" height="56" rx="5" fill="#141005" stroke="#2e2409"/><text x="501" y="166" text-anchor="middle" fill="#c9b38a">7 registro</text><text x="501" y="182" text-anchor="middle" fill="#8a6a2a" font-size="9">exportable / archivo</text>
+          </g>
+          <!-- arrows top row -->
+          <g stroke="#8a6a2a" stroke-width="1.5" fill="none">
+            <line x1="124" y1="65" x2="148" y2="65" marker-end="url(#ar2)"/>
+            <line x1="262" y1="65" x2="286" y2="65" marker-end="url(#ar2)"/>
+            <line x1="400" y1="65" x2="424" y2="65" marker-end="url(#ar2)"/>
+            <line x1="576" y1="65" x2="600" y2="65" marker-end="url(#ar2)"/>
+            <!-- down to payout -->
+            <line x1="658" y1="90" x2="658" y2="138" marker-end="url(#ar2)"/>
+            <!-- payout to registro -->
+            <line x1="602" y1="168" x2="578" y2="168" marker-end="url(#ar2)"/>
+          </g>
+          <!-- the problem annotation -->
+          <g>
+            <rect x="735" y="120" width="175" height="92" rx="5" fill="#1b1507" stroke="#5a2420"/>
+            <text x="748" y="142" fill="#ff4d3d" font-size="10">HOY</text>
+            <text x="748" y="160" fill="#c9b38a" font-size="9.5">el veredicto (4) dispara</text>
+            <text x="748" y="174" fill="#c9b38a" font-size="9.5">el pago (6) en ~1 min.</text>
+            <text x="748" y="192" fill="#ffd84d" font-size="9.5">5 y 6 no pueden</text>
+            <text x="748" y="204" fill="#ffd84d" font-size="9.5">ejercerse.</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>El bloqueo mínimo: retener las misiones con fondos en <code>FULFILLED_PENDING</code> (un estado que ya existe) durante una ventana declarada y/o hasta confirmación humana. Eso hace posible el veredicto humano paralelo (4), la disputa ensayada (5) y una liquidación que espera (6).</figcaption>
+    </figure>
+    </div>
+
+    <div class="grid3" style="margin-top:16px">
+      <div class="card"><h3>Hipótesis provisional</h3><p class="mono-note"><b>H-circuito.</b> El circuito de encargar, validar y pagar —invertido— ya es la obra y carga el conflicto.</p></div>
+      <div class="card"><h3>Alternativa desafiante</h3><p class="mono-note"><b>H-antagonismo.</b> Sin una institución bajo presión, la obra colapsa en investigación convencional.</p></div>
+      <div class="card"><h3>Qué lo decide</h3><p class="mono-note">Tres lectores califican a ciegas el registro exportado: ¿lee como <b>obra</b>, <b>conflicto</b> o <b>informe</b>?</p></div>
+    </div>
+  </section>
+
+  <!-- ================= DECISIONES ================= -->
+  <section id="decisiones">
+    <div class="sec-h"><span class="sec-n">07</span><span class="sec-t">Decisiones que esperan a Boris</span></div>
+    <p class="lede">Todo lo que toca dinero, identidad, comunicación externa o publicación queda como decisión en el pulso. Una es urgente.</p>
+
+    <div class="callout red" style="margin:4px 0 18px">
+      <div class="h">D13 · urgente · comunicación externa</div>
+      <p>En la propia plataforma hay un reporte (publicado como claim) que alega credenciales débiles de la cuenta operadora, y una misión aparece posteada bajo <code>@mnrr</code> por un tercero. <strong>El OS no probó nada ni tocó nada.</strong> Hay un borrador para avisarle a Manu en <code>outbox/</code>, <strong>sin enviar</strong>. Hasta que esa cuenta rote su passphrase, el registro curatorial es manipulable.</p>
+    </div>
+
+    <div class="scroll"><table>
+      <thead><tr><th style="width:52px">ID</th><th>Decisión</th><th style="width:120px">Bloquea</th><th style="width:96px">Estado</th></tr></thead>
+      <tbody>
+        <tr><td><b>D13</b></td><td>Avisar a Manu (cuenta operadora)</td><td>validez del Ensayo 0</td><td><span class="tag urgent">urgente</span></td></tr>
+        <tr><td><b>D10</b></td><td>Apagar el root del sitio: hoy renderiza el README por un plugin de Jekyll. Off = un <code>_config.yml</code>.</td><td>cosmético</td><td><span class="tag open">abierta</span></td></tr>
+        <tr><td><b>D12</b></td><td>Login humano en cicfa.lol para ver el formulario Broadcast (el agente no puede tipear una passphrase)</td><td>diseño del encargo</td><td><span class="tag open">abierta</span></td></tr>
+        <tr><td><b>D14</b></td><td>Aprobar un publish de los documentos B0.1 actualizados</td><td>nada</td><td><span class="tag open">abierta</span></td></tr>
+        <tr><td><b>D3</b></td><td>Enviar el mensaje a Manu (acceso al repo, misión TEST, curaduría asistida)</td><td>Ensayo 0</td><td><span class="tag block">pendiente</span></td></tr>
+        <tr><td><b>D4</b></td><td>Participantes, alcance y entorno del Ensayo 0</td><td>Ensayo 0</td><td><span class="tag block">pendiente</span></td></tr>
+        <tr><td><b>D6</b></td><td>Confirmar que <code>mnrrxyz</code> = Manu (es un supuesto)</td><td>identidad</td><td><span class="tag open">abierta</span></td></tr>
+        <tr><td><b>D5</b></td><td>Invitar colaboradores · proteger <code>main</code> · CODEOWNERS</td><td>trabajo en equipo</td><td><span class="tag open">abierta</span></td></tr>
+        <tr><td><b>D7</b></td><td>Paleta: ámbar (plataforma) vs rojo/verde (OS/archivo)</td><td>identidad</td><td><span class="tag open">no bloquea</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ================= VERSIONADO ================= -->
+  <section id="versionado">
+    <div class="sec-h"><span class="sec-n">08</span><span class="sec-t">Versionado — ejes que no se mezclan</span></div>
+    <p class="lede">No inventamos una numeración por el tamaño del cambio. Cada eje cuenta algo distinto.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Eje</th><th>Hoy</th><th>Qué lo incrementa</th></tr></thead>
+      <tbody>
+        <tr><td><b>Sistema operativo</b></td><td><span class="amber">CICFA-OS Mark I</span></td><td>solo un cambio del boot spec (estructura, tokens, gates)</td></tr>
+        <tr><td><b>Canon / template</b></td><td>c-os-templater v1.0</td><td>lo incrementa COMANDO</td></tr>
+        <tr><td><b>Plataforma</b></td><td>cicfa.lol v0.1 <small>(declarado)</small></td><td>lo decide Manu</td></tr>
+        <tr><td><b>Caso de uso</b></td><td>B0.1</td><td>cada documento con <code>rev:</code>; un ensayo es <code>ensayo-0</code></td></tr>
+        <tr><td><b>Programa (histórico)</b></td><td>vB.01 <small>(se archiva)</small></td><td>no se continúa</td></tr>
+      </tbody>
+    </table></div>
+    <p class="mono-note" style="margin-top:14px"><span class="cmt">// el sistema anterior no tenía versión verificable: “CICFA OS v2.1.4” era copy de la página. Se archivó como “WAT-kernel OS, pre-canon”, sin inventarle un número.</span></p>
+  </section>
+
+  <footer>
+    <div class="foot-status">CICFA-OS MARK I · <b>HEALTHCHECK: ALL GREEN</b> · OBJETIVO: ABIERTO · HITO 3: PLANIFICADO · 9 DECISIONES ABIERTAS · 1 URGENTE · 2026-10-11</div>
+    <p style="margin:0;color:var(--muted)">CICFA — Cultural Infrastructure Critical Failure Attack · <span class="amber">DWG-CICFA-01</span> · operado por CICFA Comander · board: @MarketDepravation.</p>
+    <p style="margin:6px 0 0;color:var(--dim);font-size:11px">// el trabajo es sobre la violencia, no violento. este documento es para el equipo; primera versión, iteramos diseño y profundidad.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>

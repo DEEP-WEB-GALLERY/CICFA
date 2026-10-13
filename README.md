@@ -74,6 +74,7 @@ USE CASE B0.1     →  usecases/B0.1/                         # el circuito como
 PAST TEST         →  archive/operation-001_moma-sym/        # MOMA.SYM — archived, pot compromised
 PRE-CANON OS      →  archive/wat-kernel-os/                 # the March–October 2026 runbooks, frozen
 OBJECTIVE         →  OPEN — under iteration                 # candidate formulations; one experiment decides
+REPORTS           →  reports/                               # team-facing documentation, served by Pages
 ```
 
 ---

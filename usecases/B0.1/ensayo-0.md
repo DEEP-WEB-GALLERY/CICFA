@@ -58,6 +58,9 @@ Una misión `demand` marcada TEST cuyo encargo es reconstruir, con fuentes públ
 | Participantes (cuatro roles + dos lectores) | Boris | pendiente |
 | Alcance exacto del encargo y plazo | Boris | pendiente |
 | Aprobación del ensayo | Boris | pendiente |
+| **Bisagra (run-01):** desacoplar el pago del veredicto FULFILLED — retener las misiones con fondos en `FULFILLED_PENDING` durante una ventana declarada y/o hasta confirmación humana. Hoy el barrido se mina ~1 min después del veredicto, así que las etapas 4–6 no pueden ejercerse. | Manu | pendiente — **es el bloqueo mínimo** |
+| Observar el formulario Broadcast con una cuenta (campos, TYPE, pool, opciones de curaduría/TEST) — un humano tiene que hacer el login | Boris | pendiente (D12) |
+| Condición de validez, no de plataforma: la cuenta operadora de la plataforma debe rotar su passphrase antes del ensayo (alegación pública de credenciales débiles + una misión posteada bajo esa cuenta por un tercero; nada probado por nosotros) | Manu (avisado por Boris) | pendiente (D13) |
 
 Ninguna acción sobre la plataforma — publicar, respaldar, reclamar, disputar — ocurre antes de que todas las filas digan "acordado".
 
